@@ -4,6 +4,14 @@ from unified_planning.engines import SequentialSimulator
 from unified_planning.model import UPCOWState, Fluent
 from typing import cast
 
+def convert_to_float(frac):
+    sp = frac.split('/')
+    if (len(sp) == 1):
+        return float(sp[0])
+    else:
+        return float(sp[0])/float(sp[1])
+
+
 class CAOSProblem:
     def __init__(self, numberOfClients, numberOfPeriods, startBalance):
         self.NumberOfClients = numberOfClients
@@ -208,8 +216,8 @@ class CAOSProblem:
                         if (state.get_value(current_period(p)) == problem.env.expression_manager.TRUE()):
                             print('CURRENT PERIOD', p)
                             print('Action', a)
-                            print('Start Balance', state.get_value(start_balance_at(p)))
-                            print('Final Balance', state.get_value(final_balance_at(p)))
+                            print('Start Balance', convert_to_float(str(state.get_value(start_balance_at(p)).constant_value())))
+                            print('Final Balance', convert_to_float(str(state.get_value(final_balance_at(p)).constant_value())))
                             break
                 
                 if not (simulator.is_goal(state)):
