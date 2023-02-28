@@ -11,30 +11,19 @@ def convert_to_float(frac):
     else:
         return float(sp[0])/float(sp[1])
 
-
-class CAOSProblem:
-    def __init__(self, numberOfClients, numberOfPeriods, startBalance):
-        self.NumberOfClients = numberOfClients
-        self.NumberOfPeriods = numberOfPeriods
-        self.StartBalance = startBalance
+#Classes
+class PlanningProblem:
+    def __init__(self):
+        self.NumberOfClients = 0
+        self.NumberOfPeriods = 0
+        self.StartBalance = 0
         self.InboundContracts = []
         self.OutboundContracts = []
-        
 
-    def AddInboundContract(self, c):
-        if not c in self.InboundContracts:
-            self.InboundContracts.append(c)
-
-    def AddOutboundContract(self, c):
-        if not c in self.OutboundContracts:
-            self.OutboundContracts.append(c)
+class Planner:
     
-    def Report(self):
-        print("NOT IMPLEMENTED")
-        pass
-    
-    def Solve(self):
-
+    @staticmethod
+    def Solve(pp):
         #Model
         Period = UserType('Period')
         Client = UserType('Client')
@@ -59,7 +48,7 @@ class CAOSProblem:
         problem.add_fluent(connected_periods, default_initial_value = False)
         problem.add_fluent(start_balance_at, default_initial_value = 0)
         problem.add_fluent(final_balance_at, default_initial_value = 0)
-        #problem.add_fluent(credit_line_charge, default_initial_value = 0)
+        
         problem.add_fluent(direct_inbound_data, default_initial_value = -1)
         problem.add_fluent(direct_outbound_data, default_initial_value = -1)
         problem.add_fluent(in_contract_status, default_initial_value = False)
@@ -70,10 +59,10 @@ class CAOSProblem:
         periods = []
         in_contracts = []
         out_contracts = []
-        for i in range(self.NumberOfPeriods + 1):
+        for i in range(pp.NumberOfPeriods + 1):
             periods.append(unified_planning.model.Object('period_%s' % i, Period))
 
-        for i in range(self.NumberOfClients):
+        for i in range(pp.NumberOfClients):
             clients.append(unified_planning.model.Object('client_%s' % i, Client))
 
         problem.add_objects(periods)
@@ -82,10 +71,10 @@ class CAOSProblem:
 
         #Init Period Connections
         problem.set_initial_value(current_period(periods[0]), True)
-        for i in range(self.NumberOfPeriods):
+        for i in range(pp.NumberOfPeriods):
             problem.set_initial_value(connected_periods(periods[i], periods[i + 1]), True)
 
-        for c in self.InboundContracts:
+        for c in pp.InboundContracts:
             start_p = c['period']
             amount = c['amount']
             rate = c['rate']
@@ -93,12 +82,12 @@ class CAOSProblem:
             in_contracts.append(contract)
             problem.add_object(contract)
             
-            for p in range(self.NumberOfPeriods):
+            for p in range(pp.NumberOfPeriods):
                 if (p >= start_p):
                     problem.set_initial_value(direct_inbound_data(periods[p], contract), (1.0 + rate * (p - start_p)) * amount)
 
 
-        for c in self.OutboundContracts:
+        for c in pp.OutboundContracts:
             start_p = c['period']
             amount = c['amount']
             rate = c['rate']
@@ -106,13 +95,13 @@ class CAOSProblem:
             out_contracts.append(contract)
             problem.add_object(contract)
             
-            for p in range(self.NumberOfPeriods):
+            for p in range(pp.NumberOfPeriods):
                 if (p >= start_p):
                     problem.set_initial_value(direct_outbound_data(periods[p], contract), (1.0 + rate * (p - start_p)) * amount)
             
         #Initial Balance
-        problem.set_initial_value(start_balance_at(periods[0]), self.StartBalance)
-        problem.set_initial_value(final_balance_at(periods[0]), self.StartBalance)
+        problem.set_initial_value(start_balance_at(periods[0]), pp.StartBalance)
+        problem.set_initial_value(final_balance_at(periods[0]), pp.StartBalance)
 
         #Actions
 
@@ -175,12 +164,12 @@ class CAOSProblem:
 
         #Cost Minimization (NO SOLVER - RIP)
 
-        # problem.add_quality_metric(
-        #     unified_planning.model.metrics.MinimizeExpressionOnFinalState(credit_line_charge(periods[-1]))
-        # )
-
+        problem.add_quality_metric(
+            unified_planning.model.metrics.MaximizeExpressionOnFinalState(final_balance_at(periods[-1]))
+        )
+        
         print(problem)
-
+        
         #Solve
         # OLD
         # with OneshotPlanner(

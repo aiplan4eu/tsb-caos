@@ -1,35 +1,20 @@
-from planner import CAOSProblem
-
-#Data
-NumberOfClients = 3 #0, 1 customers, #2 supplier
-NumberOfPeriods = 3
-StartBalance = 0
-
-#Transaction Data
-InboundContracts = [
-    # Take 1000 from customer 0 at period 0 or 1500 on period 1
-    {'id':0, 'client_id': 0, 'period': 0, 'amount': 1000, 'rate'  : 1.5  },
-    {'id':1, 'client_id': 1, 'period': 1, 'amount': 500,  'rate'  : 2.0  }
-    #{'id':2, 'client_id': 0, 'period': 2, 'amount': 500,  'rate'  : 1.2  },
-    #{'id':3, 'client_id': 1, 'period': 2, 'amount': 500,  'rate'  : 1.0  }
-]
+from common import CAOSProblem
+from scenario_generator import *
+import json
 
 
-OutboundContracts = [
-    {'id':4, 'client_id': 2, 'period': 0, 'amount': 1000, 'rate' : 1.0 },
-    {'id':5, 'client_id': 2, 'period': 0, 'amount': 1500,  'rate' : 1.2 }
-]
+#Load Instance
+f = open("test_instance.json")
+instance = json.loads(f.read())
+f.close()
 
+p = CAOSProblem()
 
-#Generate Problem
-p = CAOSProblem(NumberOfClients, NumberOfPeriods, StartBalance)
+#Load Instance
+p.LoadInstance(instance)
+p.Report()
 
-for c in InboundContracts:
-    p.AddInboundContract(c)
-
-for c in OutboundContracts:
-    p.AddOutboundContract(c)
-
-#Solve the Problem
+#Solve Problem
 p.Solve()
+
 
