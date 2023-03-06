@@ -1,0 +1,51 @@
+{
+    "NumberOfClients": 3,
+    "NumberOfPeriods" : 3,
+    "StartBalance" : 0,
+    "LoanRate" : 2.5,
+    "Clients": {
+        "Amazon":
+        {
+            "a" : 2.45,
+            "b" : 5.45
+        },
+        "Google":
+        {
+            "a" : 0.55,
+            "b" : 4.25
+        },
+        "Facebook":
+        {
+            "a" : 1.05,
+            "b" : 2.60
+        }
+    },
+    "Contracts": {
+        "Inbound":
+        [
+            {
+                "client" : "Amazon",
+                "period" : 0,
+                "amount" : 1000
+            },
+            {
+                "client" : "Google",
+                "period" : 1,
+                "amount" : 3500
+            }
+        ],
+        "Outbound":
+        [
+            {
+                "client" : "Facebook",
+                "period" : 0,
+                "amount" : 1000
+            },
+            {
+                "client" : "Facebook",
+                "period" : 0,
+                "amount" : 1500
+            }
+        ]
+    }
+}

@@ -3,6 +3,8 @@ from unified_planning.shortcuts import *
 from unified_planning.engines import SequentialSimulator
 from unified_planning.model import UPCOWState, Fluent
 from typing import cast
+from utilities import log
+
 
 def convert_to_float(frac):
     sp = frac.split('/')
@@ -17,8 +19,51 @@ class PlanningProblem:
         self.NumberOfClients = 0
         self.NumberOfPeriods = 0
         self.StartBalance = 0
+        self.LoanRate = 0
         self.InboundContracts = []
         self.OutboundContracts = []
+        self.solution = None
+
+
+class PlanningSolution:
+    def __init__(self):
+        self.actions = {}
+        self.objective = -1
+    
+    def AddAction(self, ctr, period):
+        if (period not in self.actions):
+            self.actions[period] = []
+        self.actions[period].append(ctr)
+
+    def Report(self):
+        print("Actions:", self.actions)
+        print('Objective:', self.objective)
+
+    def CreateFromPlan(self, pp, plan):
+        self.objective = pp.StartBalance
+        
+        period_id = 0
+        for a in plan.actions:
+            if a.action.name == 'direct_pay_action':
+                #Find Contract id
+                contract_id = int(str(a.actual_parameters[1]).split('_')[-1])
+                ctr = pp.OutboundContracts[contract_id]
+                self.AddAction(ctr['id'], period_id)
+                self.objective -= ctr['amount'] * (1 + (period_id - ctr['period']) * ctr['rate']/100.0) 
+            elif a.action.name == 'direct_recv_action':
+                #Find Contract id
+                contract_id = int(str(a.actual_parameters[1]).split('_')[-1])
+                ctr = pp.InboundContracts[contract_id]
+                self.AddAction(ctr['id'], period_id)
+                self.objective += ctr['amount'] * (1 + (period_id - ctr['period']) * ctr['rate']/100.0)
+            elif a.action.name == 'advance_period':
+                period_id += 1
+                if (self.objective < 0):
+                    self.objective *= pp.LoanRate 
+            else:
+                print("Unsupported Action")
+
+                
 
 class Planner:
     
@@ -74,11 +119,12 @@ class Planner:
         for i in range(pp.NumberOfPeriods):
             problem.set_initial_value(connected_periods(periods[i], periods[i + 1]), True)
 
-        for c in pp.InboundContracts:
+        for i in range(len(pp.InboundContracts)):
+            c = pp.InboundContracts[i]
             start_p = c['period']
             amount = c['amount']
-            rate = c['rate']
-            contract = unified_planning.model.Object('incontract_%s' % c['id'], InContract)
+            rate = c['rate'] / 100.0
+            contract = unified_planning.model.Object('incontract_%s' % i, InContract)
             in_contracts.append(contract)
             problem.add_object(contract)
             
@@ -87,11 +133,12 @@ class Planner:
                     problem.set_initial_value(direct_inbound_data(periods[p], contract), (1.0 + rate * (p - start_p)) * amount)
 
 
-        for c in pp.OutboundContracts:
+        for i in range(len(pp.OutboundContracts)):
+            c = pp.OutboundContracts[i]
             start_p = c['period']
             amount = c['amount']
-            rate = c['rate']
-            contract = unified_planning.model.Object('outcontract_%s' % c['id'], OutContract)
+            rate = c['rate'] / 100.0
+            contract = unified_planning.model.Object('outcontract_%s' % i, OutContract)
             out_contracts.append(contract)
             problem.add_object(contract)
             
@@ -136,8 +183,8 @@ class Planner:
         to_period = period_advance_action.parameter('to_period')
         period_advance_action.add_precondition(connected_periods(from_period, to_period))
         period_advance_action.add_precondition(current_period(from_period))
-        period_advance_action.add_effect(start_balance_at(to_period), Times(1.02, final_balance_at(from_period)), LT(final_balance_at(from_period), 0))
-        period_advance_action.add_effect(final_balance_at(to_period), Times(1.02, final_balance_at(from_period)), LT(final_balance_at(from_period), 0))
+        period_advance_action.add_effect(start_balance_at(to_period), Times(pp.LoanRate, final_balance_at(from_period)), LT(final_balance_at(from_period), 0))
+        period_advance_action.add_effect(final_balance_at(to_period), Times(pp.LoanRate, final_balance_at(from_period)), LT(final_balance_at(from_period), 0))
         period_advance_action.add_effect(start_balance_at(to_period), final_balance_at(from_period), GT(final_balance_at(from_period), 0))
         period_advance_action.add_effect(final_balance_at(to_period), final_balance_at(from_period), GT(final_balance_at(from_period), 0))
 
@@ -163,12 +210,11 @@ class Planner:
             problem.add_goal(out_contract_status(c))
 
         #Cost Minimization (NO SOLVER - RIP)
-
-        problem.add_quality_metric(
-            unified_planning.model.metrics.MaximizeExpressionOnFinalState(final_balance_at(periods[-1]))
-        )
+        # problem.add_quality_metric(
+        #     unified_planning.model.metrics.MaximizeExpressionOnFinalState(final_balance_at(periods[-1]))
+        # )
         
-        print(problem)
+        log(problem)
         
         #Solve
         # OLD
@@ -186,12 +232,18 @@ class Planner:
         with OneshotPlanner(name = "enhsp-opt") as planner:
             planner.skip_checks = False
             result = planner.solve(problem)
-            print(result.status)
+            log(result.status)
             if result.status == unified_planning.engines.PlanGenerationResultStatus.SOLVED_OPTIMALLY or result.status == unified_planning.engines.PlanGenerationResultStatus.SOLVED_SATISFICING:
-                print("Output Schedule using", planner.name)
-                for a in result.plan.actions:
-                    print(a)
+                log("Output Schedule using " + planner.name)
                 
+                #Create Solution
+                sol = PlanningSolution()
+                sol.CreateFromPlan(pp, result.plan)
+                #sol.Report()
+
+                '''
+                NOTE: SIMULATION WORKS ONLY WITHOUT THE PLAN METRIC FUNCTIONS
+                        
                 print("Simulate the plan")
                 simulator = SequentialSimulator(problem)
                 state = UPCOWState(problem.initial_values)
@@ -211,9 +263,12 @@ class Planner:
                 
                 if not (simulator.is_goal(state)):
                     print("ERROR: NO GOAL STATE")
-            
+                '''
+                return sol
             else:
                 print("No plan found.")
+                return None
+
 
 
     

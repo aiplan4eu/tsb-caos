@@ -3,6 +3,8 @@ from scenario_generator import *
 import json
 
 
+random.seed(0x17)
+
 #Load Instance
 f = open("test_instance.json")
 instance = json.loads(f.read())

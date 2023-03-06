@@ -1,5 +1,7 @@
 from scenario_generator import ScenarioGenerator
+from plan_evaluator import PlanEvaluator
 from planner import Planner, PlanningProblem
+from matplotlib import pyplot as plt
 
 class Client:
     def __init__(self, name, a, b):
@@ -20,6 +22,7 @@ class CAOSProblem:
         self.NumberOfClients = 0
         self.NumberOfPeriods = 0
         self.StartBalance = 0
+        self.LoanRate = 0.0
         
         self.Contracts = {}
         self.InboundContracts = []
@@ -34,6 +37,7 @@ class CAOSProblem:
         self.NumberOfClients = instance["NumberOfClients"]
         self.NumberOfPeriods = instance["NumberOfPeriods"]
         self.StartBalance = instance["StartBalance"]
+        self.LoanRate = instance["LoanRate"]
 
         #Add Clients
         for c in instance["Clients"]:
@@ -106,33 +110,41 @@ class CAOSProblem:
 
     
     def GenerateScenarios(self):
-        self.scenarios = ScenarioGenerator.GenerateScenarios(self, 10)
+        self.scenarios = ScenarioGenerator.GenerateScenarios(self, 5)
     
     def SolveScenarios(self):
         for client_name in self.scenarios:
             for rate in self.scenarios[client_name]:
                 for scn in self.scenarios[client_name][rate]:
                     self.SolveScenario(scn)
-
+    
+                
     def SolveScenario(self, s):
         #Create Planning Problem from scenario
         p = s.GeneratePlanningProblem()
-        Planner.Solve(p)
-        
-
-    def SolvePlanningProblem(self, p):
-        pass
-
+        #Cache the planning problem solution in the scenario
+        s.solution = Planner.Solve(p)
+        print(s.GetWeightedObjective())
+    
     def PostProcess(self):
-        pass
-
-    def EvaluateScenario(self, s):
-        pass
-
-
+        report = ""
+        for client_name in self.scenarios:
+            res = PlanEvaluator.EvaluateClient(self.clientMap[client_name], self)
+            report += "Recommended rate range for client: " + client_name + str(res)
+            #Create bar plot for client
+            f = plt.figure(figsize=(10,5))
+            plt.bar(res.keys(), res.values())
+            plt.xlabel("Rates")
+            plt.ylabel("Prob")
+            plt.title("Rate recommendation for " + client_name)
+            f.savefig(client_name, dpi=600)
+        return report       
+    
     def Solve(self):
         #Generate Scenarios
         self.GenerateScenarios()
         self.SolveScenarios()
+        print(self.PostProcess())
+
 
     
