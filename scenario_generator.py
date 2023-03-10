@@ -14,6 +14,9 @@ class Scenario:
     def GetWeightedObjective(self):
         return self.probability * self.solution.objective
 
+    def GetObjective(self):
+        return self.solution.objective
+    
     def AddRate(self, client_name, rate):
         if (client_name not in self.rates):
             print("Client does not exist")
@@ -55,11 +58,16 @@ class ScenarioGenerator:
     @staticmethod
     def FindRateProbability(client, rate):
         #TODO: Needs calibration for the range of rates
+        
         #Normal distribution
         #client alpha is the standard deviation > 0.4
         #client beta is the mean value of accepted rates
-        prob = (1.0 / (client.alpha * sqrt(2.0 * pi))) * exp(-pow(rate - client.beta, 2)/(2 * client.alpha * client.alpha))
+        #prob = (1.0 / (client.alpha * sqrt(2.0 * pi))) * exp(-pow(rate - client.beta, 2)/(2 * client.alpha * client.alpha))
         
+        #Logistic Function
+        #client alpha is the growth rate [1 , 50]
+        #client beta is the mean value [1 , 10]
+        prob = 1.0 - (1.0 / (1.0 + exp(-client.alpha * (rate - client.beta))))
         #Clamp the result
         return min(max(prob, 0.0), 1.0)
 

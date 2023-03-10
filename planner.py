@@ -209,10 +209,10 @@ class Planner:
         for c in out_contracts:
             problem.add_goal(out_contract_status(c))
 
-        #Cost Minimization (NO SOLVER - RIP)
-        # problem.add_quality_metric(
-        #     unified_planning.model.metrics.MaximizeExpressionOnFinalState(final_balance_at(periods[-1]))
-        # )
+        #Cost Minimization 
+        problem.add_quality_metric(
+            unified_planning.model.metrics.MinimizeExpressionOnFinalState(Times(-1.0, final_balance_at(periods[-1])))
+        )
         
         log(problem)
         
@@ -227,7 +227,8 @@ class Planner:
         #             print(a)
         #     else:
         #         print("No plan found.")
-
+        
+        
         #Solve
         with OneshotPlanner(name = "enhsp-opt") as planner:
             planner.skip_checks = False
@@ -239,7 +240,7 @@ class Planner:
                 #Create Solution
                 sol = PlanningSolution()
                 sol.CreateFromPlan(pp, result.plan)
-                #sol.Report()
+                sol.Report()
 
                 '''
                 NOTE: SIMULATION WORKS ONLY WITHOUT THE PLAN METRIC FUNCTIONS
