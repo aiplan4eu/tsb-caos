@@ -13,7 +13,8 @@ class PlanEvaluator:
         return 0.0 
         
     @staticmethod
-    def EvaluateClient(client, problem, policy_id):
+    def EvaluateClient(client, problem):
+        
         p1_client_rate_values = {} #Policy 1 : Highest weighted score
         p2_client_rate_values = {} #Policy 2 : Highest Prob Scenario
         p3_client_rate_values = {} #Policy 3 : Highest objective Scenario
@@ -51,24 +52,26 @@ class PlanEvaluator:
             p3_max_val = max(p3_max_val, p3_val)
         
         
-        print("Policy 1")
-        print(p1_client_rate_values)
-        print("Policy 2")
-        print(p2_client_rate_values)
-        print("Policy 3")
-        print(p3_client_rate_values)
-
-
-        if (policy_id == 1):
-            return p1_client_rate_values
-        elif (policy_id == 2):
-            return p2_client_rate_values
-        else:
-            return p3_client_rate_values
+        pol1_maxValueTuple = PlanEvaluator.GetMaxValueFromDict(p1_client_rate_values)
+        pol2_maxValueTuple = PlanEvaluator.GetMaxValueFromDict(p2_client_rate_values)
+        pol3_maxValueTuple = PlanEvaluator.GetMaxValueFromDict(p3_client_rate_values)
         
+        response = {"Policy 1" : {"Best Rate" : pol1_maxValueTuple[0], "Best Value": pol1_maxValueTuple[1], "Values" : p1_client_rate_values},
+                    "Policy 2" : {"Best Rate" : pol2_maxValueTuple[0], "Best Value": pol2_maxValueTuple[1], "Values" : p2_client_rate_values},
+                    "Policy 3" : {"Best Rate" : pol3_maxValueTuple[0], "Best Value": pol3_maxValueTuple[1], "Values" : p3_client_rate_values}}
 
-
+        return response
     
-
+    
+    @staticmethod
+    def GetMaxValueFromDict(d):
+        best_key = None
+        best_value = -100000000000
+        for k in d:
+            if (d[k] > best_value):
+                best_value = d[k]
+                best_key = k
+        
+        return (best_key, best_value)
     
 

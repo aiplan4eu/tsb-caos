@@ -1,13 +1,20 @@
 {
     "NumberOfClients": 3,
-    "NumberOfPeriods" : 3,
+    "NumberOfPeriods" : 5,
     "StartBalance" : 0,
     "LoanRate" : 2.5,
+    "Rates" : [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5],
+    "ScenariosPerRate" : 20,
     "Clients": {
         "Amazon":
         {
             "a" : 2.45,
             "b" : 5.45
+        },
+        "Tesla":
+        {
+            "a" : 2.01,
+            "b" : 1.35
         },
         "Google":
         {
@@ -29,8 +36,13 @@
                 "amount" : 1000
             },
             {
+                "client" : "Tesla",
+                "period" : 3,
+                "amount" : 2000
+            },
+            {
                 "client" : "Google",
-                "period" : 1,
+                "period" : 0,
                 "amount" : 3500
             }
         ],
@@ -43,7 +55,12 @@
             },
             {
                 "client" : "Facebook",
-                "period" : 0,
+                "period" : 1,
+                "amount" : 1000
+            },
+            {
+                "client" : "Facebook",
+                "period" : 2,
                 "amount" : 1500
             }
         ]

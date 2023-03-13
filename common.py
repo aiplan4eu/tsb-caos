@@ -2,6 +2,7 @@ from scenario_generator import ScenarioGenerator
 from plan_evaluator import PlanEvaluator
 from planner import Planner, PlanningProblem
 from matplotlib import pyplot as plt
+import json
 
 class Client:
     def __init__(self, name, a, b):
@@ -38,7 +39,9 @@ class CAOSProblem:
         self.NumberOfPeriods = instance["NumberOfPeriods"]
         self.StartBalance = instance["StartBalance"]
         self.LoanRate = instance["LoanRate"]
-
+        self.ScenariosPerRate = instance["ScenariosPerRate"]
+        self.Rates = instance["Rates"]
+        
         #Add Clients
         for c in instance["Clients"]:
             c_data = instance["Clients"][c]
@@ -110,7 +113,7 @@ class CAOSProblem:
 
     
     def GenerateScenarios(self):
-        self.scenarios = ScenarioGenerator.GenerateScenarios(self, 5)
+        self.scenarios = ScenarioGenerator.GenerateScenarios(self)
     
     def SolveScenarios(self):
         for client_name in self.scenarios:
@@ -127,24 +130,33 @@ class CAOSProblem:
         print(s.GetWeightedObjective())
     
     def PostProcess(self):
-        report = ""
+        response = {}
         for client_name in self.scenarios:
             res = PlanEvaluator.EvaluateClient(self.clientMap[client_name], self)
-            report += "Recommended rate range for client: " + client_name + str(res)
-            #Create bar plot for client
-            f = plt.figure(figsize=(10,5))
-            plt.bar(res.keys(), res.values())
-            plt.xlabel("Rates")
-            plt.ylabel("Prob")
-            plt.title("Rate recommendation for " + client_name)
-            f.savefig(client_name, dpi=600)
-        return report       
+            response[client_name] = res
+            self.CreatePlot(res["Policy 1"]["Values"].keys(), res["Policy 1"]["Values"].values(), client_name + "_pol1", "Policy 1")
+            self.CreatePlot(res["Policy 2"]["Values"].keys(), res["Policy 2"]["Values"].values(), client_name + "_pol2", "Policy 2")
+            self.CreatePlot(res["Policy 3"]["Values"].keys(), res["Policy 3"]["Values"].values(), client_name + "_pol3", "Policy 3")
+
+        f = open("report.txt", "w")
+        f.write(json.dumps(response))
+        f.close()
     
+    
+    def CreatePlot(self, keys, values, figname, policy):
+        #Create bar plot for client
+        f = plt.figure(figsize=(10,5))
+        plt.bar(keys, values)
+        plt.xlabel("Rates")
+        plt.ylabel("Prob")
+        plt.title("Rate recommendation for " + policy)
+        f.savefig(figname, dpi=600)
+
     def Solve(self):
         #Generate Scenarios
         self.GenerateScenarios()
         self.SolveScenarios()
-        print(self.PostProcess())
+        self.PostProcess()
 
 
     

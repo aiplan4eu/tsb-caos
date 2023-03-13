@@ -194,7 +194,7 @@ class Planner:
 
 
         #Constraints
-
+        
         #Make sure that there is a non-negative balance every period
         #for p in periods:
         #    problem.add_goal(GE(final_balance_at(p), 0))
@@ -209,9 +209,9 @@ class Planner:
         for c in out_contracts:
             problem.add_goal(out_contract_status(c))
 
-        #Cost Minimization 
+        #Cost Maximization 
         problem.add_quality_metric(
-            unified_planning.model.metrics.MinimizeExpressionOnFinalState(Times(-1.0, final_balance_at(periods[-1])))
+            unified_planning.model.metrics.MaximizeExpressionOnFinalState(final_balance_at(periods[-1]))
         )
         
         log(problem)
@@ -231,7 +231,7 @@ class Planner:
         
         #Solve
         with OneshotPlanner(name = "enhsp-opt") as planner:
-            planner.skip_checks = False
+            planner.skip_checks = True
             result = planner.solve(problem)
             log(result.status)
             if result.status == unified_planning.engines.PlanGenerationResultStatus.SOLVED_OPTIMALLY or result.status == unified_planning.engines.PlanGenerationResultStatus.SOLVED_SATISFICING:
@@ -240,7 +240,7 @@ class Planner:
                 #Create Solution
                 sol = PlanningSolution()
                 sol.CreateFromPlan(pp, result.plan)
-                sol.Report()
+                #sol.Report()
 
                 '''
                 NOTE: SIMULATION WORKS ONLY WITHOUT THE PLAN METRIC FUNCTIONS
@@ -267,7 +267,7 @@ class Planner:
                 '''
                 return sol
             else:
-                print("No plan found.")
+                print("No plan found.", result.status)
                 return None
 
 

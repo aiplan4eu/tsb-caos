@@ -54,7 +54,7 @@ class Scenario:
 class ScenarioGenerator:
     def __init__():
         pass
-
+    
     @staticmethod
     def FindRateProbability(client, rate):
         #TODO: Needs calibration for the range of rates
@@ -88,7 +88,7 @@ class ScenarioGenerator:
     
     
     @staticmethod
-    def GenerateScenarios(p, per_rate_scenarios):
+    def GenerateScenarios(p):
         scenarios = {}
         
         #Generate scenarios for the clients of the current period
@@ -109,11 +109,10 @@ class ScenarioGenerator:
             scenarios[client.name] = {}
 
             #Iterate in interest rates 1-10 with a 0.5 step
-            for i in range(8):
-                rate = 1.0 + 0.5 * i
+            for rate in p.Rates:
                 scenarios[client.name][str(rate)] = []
 
-                for j in range(per_rate_scenarios):
+                for j in range(p.ScenariosPerRate):
                     scn = Scenario(p)
                     scn.AddRate(client.name, rate)
                     scn.probability *= ScenarioGenerator.FindRateProbability(client, rate)
