@@ -4,27 +4,35 @@
     "StartBalance" : 0,
     "LoanRate" : 2.5,
     "Rates" : [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5],
-    "ScenariosPerRate" : 20,
+    "ScenariosPerRate" : 1,
     "Clients": {
         "Amazon":
         {
             "a" : 2.45,
-            "b" : 5.45
+            "b" : 5.45,
+            "negotiation_preference" : 0.5,
+            "deferral_openess" : 0.2
         },
         "Tesla":
         {
             "a" : 2.01,
-            "b" : 1.35
+            "b" : 1.35,
+            "negotiation_preference" : 0.5,
+            "deferral_openess" : 0.2
         },
         "Google":
         {
             "a" : 0.55,
-            "b" : 4.25
+            "b" : 4.25,
+            "negotiation_preference" : 0.5,
+            "deferral_openess" : 0.2
         },
         "Facebook":
         {
             "a" : 1.05,
-            "b" : 2.60
+            "b" : 2.60,
+            "negotiation_preference" : 0.5,
+            "deferral_openess" : 0.2
         }
     },
     "Contracts": {

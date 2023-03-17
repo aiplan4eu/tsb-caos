@@ -1,9 +1,7 @@
-from common import CAOSProblem
-from scenario_generator import *
+from problem import CAOSProblem
+#from scenario_generator import *
+import utilities
 import json
-
-
-random.seed(0x17)
 
 #Load Instance
 f = open("test_instance.json")

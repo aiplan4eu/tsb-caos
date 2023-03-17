@@ -48,14 +48,14 @@ class PlanningSolution:
                 #Find Contract id
                 contract_id = int(str(a.actual_parameters[1]).split('_')[-1])
                 ctr = pp.OutboundContracts[contract_id]
-                self.AddAction(ctr['id'], period_id)
-                self.objective -= ctr['amount'] * (1 + (period_id - ctr['period']) * ctr['rate']/100.0) 
+                self.AddAction(ctr.id, period_id)
+                self.objective -= ctr.amount * (1 + (period_id - ctr.period) * ctr.rate) 
             elif a.action.name == 'direct_recv_action':
                 #Find Contract id
                 contract_id = int(str(a.actual_parameters[1]).split('_')[-1])
                 ctr = pp.InboundContracts[contract_id]
-                self.AddAction(ctr['id'], period_id)
-                self.objective += ctr['amount'] * (1 + (period_id - ctr['period']) * ctr['rate']/100.0)
+                self.AddAction(ctr.id, period_id)
+                self.objective += ctr.amount * (1 + (period_id - ctr.period) * ctr.rate)
             elif a.action.name == 'advance_period':
                 period_id += 1
                 if (self.objective < 0):
@@ -113,7 +113,7 @@ class Planner:
         problem.add_objects(periods)
         problem.add_objects(clients)
 
-
+        
         #Init Period Connections
         problem.set_initial_value(current_period(periods[0]), True)
         for i in range(pp.NumberOfPeriods):
@@ -121,29 +121,32 @@ class Planner:
 
         for i in range(len(pp.InboundContracts)):
             c = pp.InboundContracts[i]
-            start_p = c['period']
-            amount = c['amount']
-            rate = c['rate'] / 100.0
+            start_p = c.period
+            max_p = min(pp.NumberOfPeriods - 1, c.max_forward_deferral)
+            min_p = max(0, c.max_backward_deferral)
+            amount = c.amount
+            rate = c.rate
             contract = unified_planning.model.Object('incontract_%s' % i, InContract)
             in_contracts.append(contract)
             problem.add_object(contract)
             
             for p in range(pp.NumberOfPeriods):
-                if (p >= start_p):
+                if (p >= min_p and p <= max_p):
                     problem.set_initial_value(direct_inbound_data(periods[p], contract), (1.0 + rate * (p - start_p)) * amount)
-
-
+        
         for i in range(len(pp.OutboundContracts)):
             c = pp.OutboundContracts[i]
-            start_p = c['period']
-            amount = c['amount']
-            rate = c['rate'] / 100.0
+            start_p = c.period
+            max_p = min(pp.NumberOfPeriods - 1, c.max_forward_deferral)
+            min_p = max(0, c.max_backward_deferral)
+            amount = c.amount
+            rate = c.rate
             contract = unified_planning.model.Object('outcontract_%s' % i, OutContract)
             out_contracts.append(contract)
             problem.add_object(contract)
             
             for p in range(pp.NumberOfPeriods):
-                if (p >= start_p):
+                if (p >= min_p and p <= max_p):
                     problem.set_initial_value(direct_outbound_data(periods[p], contract), (1.0 + rate * (p - start_p)) * amount)
             
         #Initial Balance
@@ -230,7 +233,7 @@ class Planner:
         
         
         #Solve
-        with OneshotPlanner(name = "enhsp-opt") as planner:
+        with OneshotPlanner(name = "enhsp-opt", ) as planner:
             planner.skip_checks = True
             result = planner.solve(problem)
             log(result.status)

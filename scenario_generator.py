@@ -1,6 +1,10 @@
 from planner import PlanningProblem
+from interest_rate_prediction import InterestRatePrediction
+from common import Contract
 import random
 from math import sqrt, pi, exp
+from utilities import log
+
 
 class Scenario:
     def __init__(self, p):
@@ -8,6 +12,7 @@ class Scenario:
         self.solution = None
         self.probability = 1.0
         self.rates = {}
+        self.Contracts = []
         for c in p.clients:
             self.rates[c.name] = 1.0
 
@@ -21,7 +26,14 @@ class Scenario:
         if (client_name not in self.rates):
             print("Client does not exist")
             return
+        
         self.rates[client_name] = rate
+
+    def AddContract(self, contract):
+        if (contract in self.Contracts):
+            return
+        
+        self.Contracts.append(contract)
 
     def GeneratePlanningProblem(self):
         p = PlanningProblem()
@@ -30,23 +42,12 @@ class Scenario:
         p.NumberOfPeriods = self.problem.NumberOfPeriods
         p.LoanRate = self.problem.LoanRate * 0.01
 
-        #Add Inbound Contracts
-        for c in self.problem.InboundContracts:
-            p.InboundContracts.append({
-                                        'id' : c.id, 
-                                        'period': c.period, 
-                                        'amount': c.amount,
-                                        'rate' : self.rates[c.client.name]
-                                    })
-            
-        #Add Outbound Contracts
-        for c in self.problem.OutboundContracts:
-            p.OutboundContracts.append({
-                                        'id' : c.id, 
-                                        'period': c.period, 
-                                        'amount': c.amount,
-                                        'rate' : self.rates[c.client.name]
-                                    })
+        #Identify Contracts
+        for c in self.Contracts:
+            if (c.type == 1): #Inbound
+                p.InboundContracts.append(c)    
+            elif (c.type == 2): #Outbound
+                p.OutboundContracts.append(c)    
         
         return p
 
@@ -55,22 +56,6 @@ class ScenarioGenerator:
     def __init__():
         pass
     
-    @staticmethod
-    def FindRateProbability(client, rate):
-        #TODO: Needs calibration for the range of rates
-        
-        #Normal distribution
-        #client alpha is the standard deviation > 0.4
-        #client beta is the mean value of accepted rates
-        #prob = (1.0 / (client.alpha * sqrt(2.0 * pi))) * exp(-pow(rate - client.beta, 2)/(2 * client.alpha * client.alpha))
-        
-        #Logistic Function
-        #client alpha is the growth rate [1 , 50]
-        #client beta is the mean value [1 , 10]
-        prob = 1.0 - (1.0 / (1.0 + exp(-client.alpha * (rate - client.beta))))
-        #Clamp the result
-        return min(max(prob, 0.0), 1.0)
-
     @staticmethod
     def FindAcceptableRate(client):
         while(True):
@@ -86,47 +71,105 @@ class ScenarioGenerator:
             if (chance < prob):
                 return pred_rate
     
+
+    @staticmethod
+    def PopulateScenarios(p, scn, rem_contracts):
+        #Process remaining contracts
+        for ctr in rem_contracts:
+            client = ctr.client
+            
+            rates = p.Rates
+            periods = [0, 1, 2, 3, 4, 5]
+            
+            if (InterestRatePrediction.IsClientNegotiating(client)):
+                #Reverse in case of outbound contracts
+                if (ctr.type == 1):
+                    rates = reversed(rates)
+                elif (ctr.type == 2):
+                    periods = reversed(periods)
+                
+                rate = InterestRatePrediction.GetInterestRateForClient(client, rates)
+                deferral_gap = InterestRatePrediction.GetMaxDeferralPeriods(client, periods)
+                
+                #Add contract with custom deferral and rate
+                ctr_copy = Contract(ctr.type, ctr.period, ctr.amount, ctr.client, ctr.period + deferral_gap, ctr.period - deferral_gap)
+                ctr_copy.id = ctr.id
+                ctr_copy.rate = rate
+                scn.AddContract(ctr_copy)
+            
+            else:
+                #Add contract without deferral
+                ctr_copy = Contract(ctr.type, ctr.period, ctr.amount, ctr.client, ctr.period, ctr.period)
+                ctr_copy.id = ctr.id
+                ctr_copy.rate = 0.0
+                scn.AddContract(ctr_copy)
+    
     
     @staticmethod
     def GenerateScenarios(p):
+        scenario_count = 0
         scenarios = {}
         
-        #Generate scenarios for the clients of the current period
-        client_list = []
-
+        #Generate scenarios for the clients with contracts on the first period
+        contract_list = []
+        
         for i in range(p.NumberOfPeriods):
             #Check of period 0
-            for c_id in p.Contracts:
-                c = p.Contracts[c_id]
-                if c.period == i and c.client not in client_list:
-                    client_list.append(c.client)    
-
-            if (len(client_list) != 0):
+            for c in p.Contracts:
+                if c.period == i:
+                    contract_list.append(c)    
+            
+            if (len(contract_list) != 0):
                 break
         
-        
-        for client in client_list:
-            scenarios[client.name] = {}
+        for contract in contract_list:
+            rest_contracts = [c for c in p.Contracts if c != contract]
+            
+            scenarios[contract.id] = {}
 
-            #Iterate in interest rates 1-10 with a 0.5 step
-            for rate in p.Rates:
-                scenarios[client.name][str(rate)] = []
+            #Generate scenarios for a single installment
+            scenarios[contract.id][1] = {}
 
-                for j in range(p.ScenariosPerRate):
-                    scn = Scenario(p)
-                    scn.AddRate(client.name, rate)
-                    scn.probability *= ScenarioGenerator.FindRateProbability(client, rate)
-                    #Create Rates for the other clients
-                    for c in p.clients:
-                        if (c.name == client.name):
-                            continue
+            for def_period in [0, 1, 2, 3, 4, 5]:
+                scenarios[contract.id][1][def_period] = {}
+                
+                for rate in p.Rates:
+                    scenarios[contract.id][1][def_period][str(rate)] = []
+
+                    for j in range(p.ScenariosPerRate):
+                        scn = Scenario(p)
+                        main_ctr = Contract(contract.type, contract.period, contract.amount, contract.client, 
+                                            contract.period + def_period, contract.period - def_period)
+                        main_ctr.id = contract.id
+                        main_ctr.rate = rate
+                        scn.AddContract(main_ctr)
                         
-                        c_rate = ScenarioGenerator.FindAcceptableRate(c)
-                        scn.probability *= ScenarioGenerator.FindRateProbability(c, c_rate)
-                        scn.AddRate(c.name, c_rate)
-                    
-                    scenarios[client.name][str(rate)].append(scn)
-        
+                        ScenarioGenerator.PopulateScenarios(p, scn, rest_contracts)
+                        scenarios[contract.id][1][def_period][str(rate)].append(scn)
+                        scenario_count += 1
+
+
+            #Generate scenarios for multiple installments
+            for installment_num in [3, 6]:
+                scenarios[contract.id][installment_num] = {}
+                for rate in p.Rates:
+                    scenarios[contract.id][installment_num][str(rate)] = []
+
+                    for j in range(p.ScenariosPerRate):
+                        scn = Scenario(p)
+
+                        #Add contracts for all installments
+                        main_ctr = Contract(contract.type, contract.period, contract.amount, contract.client, contract.period, contract.period)
+                        main_ctr.id = contract.id
+                        main_ctr.rate = rate
+                        scn.AddContract(main_ctr)
+                        
+                        ScenarioGenerator.PopulateScenarios(p, scn, rest_contracts)
+                        scenarios[contract.id][installment_num][str(rate)].append(scn)
+                        scenario_count += 1
+            
+
+        log("Generated " + str(scenario_count) + " Scenarios")
         return scenarios
         
 
