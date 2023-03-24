@@ -93,16 +93,16 @@ class CAOSProblem:
                             scenario_list.append(s)
 
         #Solve Sequentially
-        for s in scenario_list:
-            self.SolveScenario(s)
+        # for s in scenario_list:
+        #     self.SolveScenario(s)
         
-        # #Create thread pool
-        # print("Solving ", len(scenario_list), "using 4 threads")
-        # pool = ThreadPool(processes=4)
-        # pool.map(self.SolveScenario, scenario_list)
-        # pool.close()
-        # pool.join()
-        # print("Threads Completed")
+        #Create thread pool
+        print("Solving ", len(scenario_list), "using 4 threads")
+        pool = ThreadPool(processes=4)
+        pool.map(self.SolveScenario, scenario_list)
+        pool.close()
+        pool.join()
+        print("Threads Completed")
         
     def SolveScenario(self, s):
         #Create Planning Problem from scenario
