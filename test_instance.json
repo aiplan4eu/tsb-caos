@@ -1,9 +1,7 @@
 {
-    "NumberOfClients": 3,
-    "NumberOfPeriods" : 5,
     "StartBalance" : 0,
-    "LoanRate" : 2.5,
-    "Rates" : [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5],
+    "LoanRate" : 3.0,
+    "Rates" : [4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0],
     "ScenariosPerRate" : 1,
     "Clients": {
         "Amazon":

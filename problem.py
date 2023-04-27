@@ -21,8 +21,6 @@ class CAOSProblem:
         self.scenarios = []
         
     def LoadInstance(self, instance):
-        self.NumberOfClients = instance["NumberOfClients"]
-        self.NumberOfPeriods = instance["NumberOfPeriods"]
         self.StartBalance = instance["StartBalance"]
         self.LoanRate = instance["LoanRate"]
         self.ScenariosPerRate = instance["ScenariosPerRate"]
@@ -33,28 +31,39 @@ class CAOSProblem:
             c_data = instance["Clients"][c]
             self.AddCounterParty(c, c_data["a"], c_data["b"], 
                                  c_data["negotiation_preference"], c_data["deferral_openess"])
+        self.NumberOfClients = len(self.clients) # Calculate the correct number of clients
 
         #Add Inbound Contracts
         for c in instance["Contracts"]["Inbound"]:
             client = self.clientMap[c["client"]]
+            # NOTE: periods are zero indexed
             self.AddContract(client, c["period"], c["amount"], 1)
 
         #Add Outbound Contracts
         for c in instance["Contracts"]["Outbound"]:
             client = self.clientMap[c["client"]]
+            # NOTE: periods are zero indexed
             self.AddContract(client, c["period"], c["amount"], 2)
 
 
     def Report(self):
-        print("CounterParties")
-        for c in self.clients:
-            print(c.name, c.alpha, c.beta)
+        print("#######################")
+        print("### Instance Statistics")
+        print("### Total Periods:", self.NumberOfPeriods)
+        print("### Total Contracts:", len(self.Contracts))
+        print("### Total CounterParties", len(self.clients))
+        print("#######################")
+        
+        print("### Inbound Contracts:")
+        for c in [f for f in self.Contracts if f.type == 1]:
+            print("# \t Period: ", c.period, " Client: ", c.client.name, "Amount: ", c.amount)
+        
+        print("### Outbound Contracts")
+        for c in [f for f in self.Contracts if f.type == 2]:
+            print("# \t Period: ", c.period, " Client: ", c.client.name, "Amount: ", c.amount)
+        
+        print("#######################")
 
-        print("Contracts")
-        for c in self.Contracts:
-            print(c.client.name, c.amount, c.period, c.type)
-    
-    
     def AddCounterParty(self, name, a, b, c, d):
         if (name in self.clients):
             print("Client", name, "exists")
@@ -63,14 +72,15 @@ class CAOSProblem:
         #Create CounterParty
         c = Client(name, a, b, c, d)
         c.id = len(self.clients)
-        self.clients.append(c)
-        self.clientMap[name] = c
+        self.clients.append(c) # Client List
+        self.clientMap[name] = c # Client Dictionary using their name as the key
 
     def AddContract(self, client, period, amount, typ):
         ctr = Contract(typ, period, amount, client)
         ctr.id = len(self.Contracts)
         ctr.type = typ
         self.Contracts.append(ctr)
+        self.NumberOfPeriods = max(self.NumberOfPeriods, period + 1)
     
     def GenerateScenarios(self):
         self.scenarios = ScenarioGenerator.GenerateScenarios(self)
@@ -97,8 +107,9 @@ class CAOSProblem:
         #     self.SolveScenario(s)
         
         #Create thread pool
-        print("Solving ", len(scenario_list), "using 4 threads")
-        pool = ThreadPool(processes=4)
+        processes_num = 1
+        print("Solving ", len(scenario_list), "scenarios using", processes_num, "threads")
+        pool = ThreadPool(processes=processes_num)
         pool.map(self.SolveScenario, scenario_list)
         pool.close()
         pool.join()
@@ -110,9 +121,9 @@ class CAOSProblem:
         #Cache the planning problem solution in the scenario
         try:
             s.solution = Planner.Solve(p)
-        except:
+        except Exception as ex:
             print("ERROR EXECUTING PLAN")
-            print(p)
+            print(ex)
         #print(s.GetWeightedObjective())
     
     def PostProcess(self):

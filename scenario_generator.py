@@ -122,6 +122,7 @@ class ScenarioGenerator:
             if (len(contract_list) != 0):
                 break
         
+        
         for contract in contract_list:
             rest_contracts = [c for c in p.Contracts if c != contract]
             
@@ -130,9 +131,12 @@ class ScenarioGenerator:
             #Generate scenarios for a single installment
             scenarios[contract.id][1] = {}
 
+            #For single installments check the negotiation with multiple deferral periods
             for def_period in [0, 1, 2, 3, 4, 5]:
-                scenarios[contract.id][1][def_period] = {}
+                if (def_period > p.NumberOfPeriods - 1):
+                    continue
                 
+                scenarios[contract.id][1][def_period] = {}
                 for rate in p.Rates:
                     scenarios[contract.id][1][def_period][str(rate)] = []
 
@@ -150,7 +154,13 @@ class ScenarioGenerator:
 
 
             #Generate scenarios for multiple installments
+            #payments in 3 or in 6 installments
+            
             for installment_num in [3, 6]:
+                
+                if (installment_num > p.NumberOfPeriods):
+                    continue
+                
                 scenarios[contract.id][installment_num] = {}
                 for rate in p.Rates:
                     scenarios[contract.id][installment_num][str(rate)] = []

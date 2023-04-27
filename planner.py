@@ -1,7 +1,7 @@
 import unified_planning
 from unified_planning.shortcuts import *
-from unified_planning.engines import SequentialSimulator
-from unified_planning.model import UPCOWState, Fluent
+#from unified_planning.engines import SequentialSimulator
+from unified_planning.model import Fluent
 from typing import cast
 from utilities import log
 
@@ -233,6 +233,7 @@ class Planner:
         
         
         #Solve
+        up.shortcuts.get_environment().credits_stream = None # Skip engine credits
         with OneshotPlanner(name = "enhsp-opt", ) as planner:
             planner.skip_checks = True
             result = planner.solve(problem)
