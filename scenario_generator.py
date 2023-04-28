@@ -95,8 +95,8 @@ class ScenarioGenerator:
                 elif (ctr.type == 2):
                     periods = reversed(periods)
                 
-                rate = InterestRatePrediction.GetInterestRateForClient(client, rates)
-                deferral_gap = InterestRatePrediction.GetMaxDeferralPeriods(client, periods)
+                rate, r_prob = InterestRatePrediction.GetInterestRateForClient(client, rates)
+                deferral_gap, def_prob = InterestRatePrediction.GetMaxDeferralPeriods(client, periods)
                 
                 #Add contract with custom deferral and rate
                 ctr_copy = Contract(ctr.type, ctr.period, ctr.amount, ctr.client, 
@@ -106,6 +106,7 @@ class ScenarioGenerator:
                 ctr_copy.id = ctr.id
                 ctr_copy.rate = rate
                 scn.AddContract(ctr_copy)
+                scn.probability *= (r_prob * def_prob)
             else:
                 #Add contract without deferral
                 ctr_copy = Contract(ctr.type, ctr.period, ctr.amount, ctr.client, ctr.period, ctr.period)
@@ -158,13 +159,14 @@ class ScenarioGenerator:
                                             contract.period + def_period, contract.period + def_period)
                         main_ctr.id = contract.id
                         main_ctr.rate = 0.01 * rate
+                        scn.probability *= InterestRatePrediction.FindRateProbability(contract.client, rate) * InterestRatePrediction.FindDeferralProbability(contract.client, def_period)
                         scn.AddContract(main_ctr)
                         
                         ScenarioGenerator.PopulateScenarios(p, scn, rest_contracts)
                         scenarios[contract.id][1][def_period][str(rate)].append(scn)
                         scenario_count += 1
 
-
+            
             #Generate scenarios for multiple installments
             for installment_num in p.Installments:
                 
@@ -188,6 +190,8 @@ class ScenarioGenerator:
                             main_ctr.id = contract.id
                             main_ctr.rate = 1.0 # Force a rate of 1.0 because the installment amount has been precalculated
                             scn.AddContract(main_ctr)
+                        
+                        scn.probability *= InterestRatePrediction.FindRateProbability(contract.client, rate)
                         
                         ScenarioGenerator.PopulateScenarios(p, scn, rest_contracts)
                         scenarios[contract.id][installment_num][str(rate)].append(scn)

@@ -131,19 +131,34 @@ class CAOSProblem:
             log(f"Problem when solving Scenario {s.index}", "ERROR")
             log(ex, "ERROR")
         finally:
-            print("Done")
+            #print("Done")
+            pass
+            
     
     def PostProcess(self):
         response = {}
-        for contract_id in self.scenarios:
-            res = PlanEvaluator.EvaluateContract(contract_id, self)
-            
-            response[contract_id] = res
-            self.CreatePlot(res["Policy 1"]["Values"].keys(), res["Policy 1"]["Values"].values(), str(ctr.id) + "_pol1", "Policy 1")
-            self.CreatePlot(res["Policy 2"]["Values"].keys(), res["Policy 2"]["Values"].values(), str(ctr.id) + "_pol2", "Policy 2")
-            self.CreatePlot(res["Policy 3"]["Values"].keys(), res["Policy 3"]["Values"].values(), str(ctr.id) + "_pol3", "Policy 3")
         
-        f = open("report.txt", "w")
+        for contract_id in self.scenarios:
+            response[contract_id] = {'scenario_results': []}
+            res = PlanEvaluator.EvaluateContract(contract_id, self)
+            response[contract_id]['scenario_results'] = [r.toDict() for r in res]
+            
+            #Post Process results and find scenario with the best score for every policy
+            p1_ctr = PlanEvaluator.GetPlanWithMaxPolicy(res, 1)
+            p2_ctr = PlanEvaluator.GetPlanWithMaxPolicy(res, 2)
+            p3_ctr = PlanEvaluator.GetPlanWithMaxPolicy(res, 3)
+            
+            #Store results to the response
+            response[contract_id]['Policy 1'] = p1_ctr.toDict()
+            response[contract_id]['Policy 2'] = p2_ctr.toDict()
+            response[contract_id]['Policy 3'] = p3_ctr.toDict()
+            
+            #TODO: Create Plots     
+            #self.CreatePlot(res["Policy 1"]["Values"].keys(), res["Policy 1"]["Values"].values(), str(ctr.id) + "_pol1", "Policy 1")
+            #self.CreatePlot(res["Policy 2"]["Values"].keys(), res["Policy 2"]["Values"].values(), str(ctr.id) + "_pol2", "Policy 2")
+            #self.CreatePlot(res["Policy 3"]["Values"].keys(), res["Policy 3"]["Values"].values(), str(ctr.id) + "_pol3", "Policy 3")
+
+        f = open("report.json", "w")
         f.write(json.dumps(response))
         f.close()
     

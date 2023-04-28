@@ -37,9 +37,9 @@ class InterestRatePrediction:
             sample_num = random.random()
             
             if (sample_num < r_prob):
-                return 0.01 * r #Normalize rate from 0-100 to 0-1
+                return (0.01 * r, r_prob) #Normalize rate from 0-100 to 0-1
         
-        return 1.0
+        return (1.0, 1.0)
 
     def GetMaxDeferralPeriods(c, periods):
         for p in periods:
@@ -47,8 +47,8 @@ class InterestRatePrediction:
             sample_num = random.random()
             
             if (sample_num < r_prob):
-                return p
-        return 0
+                return (p, r_prob)
+        return (0, 1.0)
 
     
     @staticmethod

@@ -240,7 +240,7 @@ class Planner:
                 #Create Solution
                 sol = PlanningSolution()
                 sol.CreateFromPlan(pp, result.plan)
-                sol.Report()
+                #sol.Report()
 
                 '''
                 NOTE: SIMULATION WORKS ONLY WITHOUT THE PLAN METRIC FUNCTIONS

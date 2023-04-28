@@ -1,3 +1,6 @@
+import json
+from utilities import log
+
 
 class ContractEvaluation:
     def __init__(self):
@@ -8,6 +11,16 @@ class ContractEvaluation:
         self.installments = 0
         self.probability = 0.0
 
+    def toDict(self):
+        return {
+                    'Deferral Periods': self.deferral_periods,
+                    'Rate': self.rate,
+                    'Weighted Objective': self.weighted_objective,
+                    'Objective': self.objective,
+                    'Installments': self.installments,
+                    'Probability': self.probability
+                }
+    
 class PlanEvaluator:
     def __init__(self):
         pass
@@ -69,16 +82,35 @@ class PlanEvaluator:
         
         return ctr_evaluations
     
-    
+
     @staticmethod
-    def GetMaxValueFromDict(d):
-        best_key = None
-        best_value = -100000000000
-        for k in d:
-            if (d[k] > best_value):
-                best_value = d[k]
-                best_key = k
+    def GetPlanWithMaxPolicy(plan_list, policy_id):
+        best_plan = None
         
-        return (best_key, best_value)
+        if (policy_id == 1): #Weighted Objective
+            best_score = 0
+            for p in plan_list:
+                if (p.weighted_objective > best_score):
+                    best_plan = p
+                    best_score = p.weighted_objective
+        
+        elif (policy_id == 2):
+            best_score = 0
+            for p in plan_list:
+                if (p.objective > best_score):
+                    best_plan = p
+                    best_score = p.objective
+        
+        elif (policy_id == 3):
+            best_score = 0
+            for p in plan_list:
+                if (p.probability > best_score):
+                    best_plan = p
+                    best_score = p.probability
+        else:
+            log("Incorrect Policy ID", "WARNING")
+        
+        return best_plan
+    
     
 
