@@ -1,4 +1,5 @@
 from planner import PlanningProblem
+from common import ContractStatus, ContractType
 from interest_rate_prediction import InterestRatePrediction
 from common import Contract
 import random
@@ -44,16 +45,17 @@ class Scenario:
 
     def GeneratePlanningProblem(self):
         p = PlanningProblem()
-        p.StartBalance = self.problem.StartBalance
+        p.StartBalance = self.problem.Balance
+        p.CurrentPeriod = self.problem.CurrentPeriod
         p.NumberOfClients = self.problem.NumberOfClients
-        p.NumberOfPeriods = self.problem.NumberOfPeriods
+        p.NumberOfPeriods = self.problem.PlanningHorizonEnd
         p.LoanRate = self.problem.LoanRate * 0.01
 
         #Identify Contracts
         for c in self.contracts:
-            if (c.type == 1): #Inbound
+            if (c.type == ContractType.INBOUND): #Inbound
                 p.InboundContracts.append(c)    
-            elif (c.type == 2): #Outbound
+            elif (c.type == ContractType.OUTBOUND): #Outbound
                 p.OutboundContracts.append(c)    
         
         return p
@@ -100,7 +102,7 @@ class ScenarioGenerator:
                 
                 #Add contract with custom deferral and rate
                 ctr_copy = Contract(ctr.type, ctr.period, ctr.amount, ctr.client, 
-                                    min(p.NumberOfPeriods - 1, ctr.period + deferral_gap), 
+                                    min(p.PlanningHorizonEnd - 1, ctr.period + deferral_gap), 
                                     max(0, ctr.period - deferral_gap))
                 
                 ctr_copy.id = ctr.id
@@ -123,18 +125,13 @@ class ScenarioGenerator:
         #Generate scenarios for the clients with contracts on the first period
         contract_list = []
         
-        for i in range(p.NumberOfPeriods):
-            #Check of period 0
-            for c in p.contracts:
-                if c.period == i:
-                    contract_list.append(c)    
-            
-            if (len(contract_list) != 0):
-                break
-        
+        #Check for contracts of the current period
+        for c in p.contracts:
+            if c.period == p.CurrentPeriod and c.status == ContractStatus.UNDER_NEGOTATION:
+                contract_list.append(c)    
         
         for contract in contract_list:
-            rest_contracts = [c for c in p.contracts if c != contract]
+            rest_contracts = [c for c in p.contracts if c != contract and c.period >= p.CurrentPeriod and c.status != ContractStatus.FINALIZED]
             
             scenarios[contract.id] = {}
 
@@ -144,7 +141,7 @@ class ScenarioGenerator:
             #For single installments check the negotiation with multiple deferral periods
             #TODO: Move the deferral periods in a configuration file
             for def_period in [1, 2, 3, 4, 5]:
-                if (def_period + contract.period > p.NumberOfPeriods - 1):
+                if (def_period + contract.period > p.PlanningHorizonEnd - 1):
                     continue
                 
                 scenarios[contract.id][1][def_period] = {}
@@ -171,7 +168,7 @@ class ScenarioGenerator:
             for installment_num in p.Installments:
                 
                 #Make sure there are enough period to accomodate the multiple installments after the contract's default period
-                if (installment_num > p.NumberOfPeriods - contract.period + 1):
+                if (installment_num > p.PlanningHorizonEnd - contract.period + 1):
                     continue
                 
                 scenarios[contract.id][installment_num] = {}

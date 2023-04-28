@@ -1,17 +1,20 @@
 from scenario_generator import ScenarioGenerator
 from plan_evaluator import PlanEvaluator
 from planner import Planner
-from common import Contract, Client
+from common import Contract, Client, ContractStatus, ContractType
 from matplotlib import pyplot as plt
 import json
 from multiprocessing.pool import ThreadPool
 from utilities import log
 
+
 class CAOSProblem:
+    CONTRACT_COUNTER = 0
+    
     def __init__(self, ):
-        self.NumberOfClients = 0
-        self.NumberOfPeriods = 0
-        self.StartBalance = 0
+        self.Balance = 0
+        self.PlanningHorizonEnd = 0
+        self.CurrentPeriod = 0
         self.LoanRate = 0.0
         
         self.contracts = []
@@ -40,30 +43,30 @@ class CAOSProblem:
         for c in instance["Contracts"]["Inbound"]:
             client = self.clientMap[c["client"]]
             # NOTE: periods are zero indexed
-            self.AddContract(client, c["period"], c["amount"], 1)
+            self.AddContract(client, c["period"], c["amount"], ContractType.INBOUND)
 
         #Add Outbound Contracts
         for c in instance["Contracts"]["Outbound"]:
             client = self.clientMap[c["client"]]
             # NOTE: periods are zero indexed
-            self.AddContract(client, c["period"], c["amount"], 2)
+            self.AddContract(client, c["period"], c["amount"], ContractType.OUTBOUND)
 
 
     def Report(self):
         print("#######################")
         print("### Instance Statistics")
-        print("### Total Periods:", self.NumberOfPeriods)
+        print("### Total Periods:", self.PlanningHorizonEnd)
         print("### Total Contracts:", len(self.contracts))
         print("### Total CounterParties", len(self.clients))
         print("#######################")
         
         print("### Inbound Contracts:")
-        for c in [f for f in self.contracts if f.type == 1]:
-            print("# \t Period: ", c.period, " Client: ", c.client.name, "Amount: ", c.amount)
-        
+        for c in [f for f in self.contracts if f.type == ContractType.INBOUND]:
+            print(f"#\t ID: {c.id} \t Period: {c.period} \t Client: {c.client.name:<8} \t Amount: {c.amount} \t Type: {c.status}")
+            
         print("### Outbound Contracts")
-        for c in [f for f in self.contracts if f.type == 2]:
-            print("# \t Period: ", c.period, " Client: ", c.client.name, "Amount: ", c.amount)
+        for c in [f for f in self.contracts if f.type == ContractType.OUTBOUND]:
+            print(f"#\t ID: {c.id} \t Period: {c.period} \t Client: {c.client.name:<8} \t Amount: {c.amount} \t Type: {c.status}")
         
         print("#######################")
 
@@ -80,12 +83,65 @@ class CAOSProblem:
 
     def AddContract(self, client, period, amount, typ):
         ctr = Contract(typ, period, amount, client)
-        ctr.id = len(self.contracts)
+        ctr.id = CAOSProblem.CONTRACT_COUNTER
         ctr.type = typ
         self.contracts.append(ctr)
         self.contractMap[ctr.id] = ctr
-        self.NumberOfPeriods = max(self.NumberOfPeriods, period + 1)
-    
+        self.PlanningHorizonEnd = max(self.PlanningHorizonEnd, period + 1)
+        CAOSProblem.CONTRACT_COUNTER +=1
+
+    def UpdateContract(self, contract, f_deferral, f_rate, f_installments):
+        #Checks
+        if not isinstance(contract, Contract):
+            print("Cannot finalize non contract object", "ERROR")
+            log("Non contract object provided", "ERROR")
+            return
+
+        if (contract not in self.contracts):
+            print("Unable to finalize contract. Check log")
+            log("Contract object does not belong to problem", "ERROR")
+            return
+
+        if (contract.period != self.CurrentPeriod):
+            print("Unable to finalize contract. Check log")
+            log("Finalizing a future contract is not yet supported", "WARNING")
+            return
+
+        #Finalize contract
+        if (f_installments == 1):
+            #In the case of 1 installment for a contract of the current period
+            #We just have to update the balance appropriately and finalize the contract
+            
+            #Calculate final amount
+            updated_amount = (1.0 + 0.01 * f_rate * (f_deferral - contract.period)) * contract.amount
+
+            if (f_deferral == self.CurrentPeriod):
+                #Update contract parameters
+                contract.status = ContractStatus.FINALIZED
+                contract.amount = updated_amount
+                contract.rate = f_rate
+            
+                if (contract.type == ContractType.INBOUND):
+                    self.Balance += updated_amount
+                elif (contract.type == ContractType.OUTBOUND):
+                    self.Balance -= updated_amount
+                print("Contract Finalized!")
+            else:
+                #Just apply new settings to the contract
+                contract.period = f_deferral
+                contract.amount = updated_amount
+                contract.rate = 1.0
+        else:
+            print("TODO")
+            assert(False)
+        
+    def AdvancePeriod(self):
+        for c in self.contracts:
+            if (c.period == self.CurrentPeriod):
+                print("Unable to advance schedule, non finalized contracts exist")
+                return
+        self.CurrentPeriod += 1
+
     def GenerateScenarios(self):
         self.scenarios, scn_count = ScenarioGenerator.GenerateScenarios(self)
         log(f'Generated {scn_count} scenarios', "INFO")
@@ -109,6 +165,7 @@ class CAOSProblem:
 
         #Solve Sequentially
         # for s in scenario_list:
+
         #     self.SolveScenario(s)
         
         #Create thread pool
@@ -153,6 +210,16 @@ class CAOSProblem:
             response[contract_id]['Policy 2'] = p2_ctr.toDict()
             response[contract_id]['Policy 3'] = p3_ctr.toDict()
             
+            print("################")
+            print("### Best Options for contract", contract_id)
+            print("### Policy 1")
+            print(p1_ctr.toDict())
+            print("### Policy 2")
+            print(p2_ctr.toDict())
+            print("### Policy 3")
+            print(p3_ctr.toDict())
+            print("################")
+            
             #TODO: Create Plots     
             #self.CreatePlot(res["Policy 1"]["Values"].keys(), res["Policy 1"]["Values"].values(), str(ctr.id) + "_pol1", "Policy 1")
             #self.CreatePlot(res["Policy 2"]["Values"].keys(), res["Policy 2"]["Values"].values(), str(ctr.id) + "_pol2", "Policy 2")
@@ -161,7 +228,7 @@ class CAOSProblem:
         f = open("report.json", "w")
         f.write(json.dumps(response))
         f.close()
-    
+        print("### Results saved to report.json")
     
     def CreatePlot(self, keys, values, figname, policy):
         #Create bar plot for client

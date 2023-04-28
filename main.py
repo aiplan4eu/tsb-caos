@@ -14,7 +14,24 @@ p = CAOSProblem()
 p.LoadInstance(instance)
 p.Report()
 
+#Finalize contract 0
+contract = p.contracts[0]
+p.UpdateContract(contract, 1, 2.0, 1)
+
+p.Report()
+
 #Solve Problem
 p.Solve()
+
+
+
+
+
+
+
+
+
+
+
 
 

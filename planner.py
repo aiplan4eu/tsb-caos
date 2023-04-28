@@ -18,6 +18,7 @@ class PlanningProblem:
     def __init__(self):
         self.NumberOfClients = 0
         self.NumberOfPeriods = 0
+        self.CurrentPeriod = 0
         self.StartBalance = 0
         self.LoanRate = 0
         self.InboundContracts = []
@@ -86,7 +87,6 @@ class Planner:
         in_contract_status = Fluent('in_contract_status', BoolType(), p=InContract)
         out_contract_status = Fluent('out_contract_status', BoolType(), p=OutContract)
 
-
         #Problem
         problem = unified_planning.model.Problem('caos')
         problem.add_fluent(current_period, default_initial_value = False)
@@ -104,10 +104,10 @@ class Planner:
         periods = []
         in_contracts = []
         out_contracts = []
-        for i in range(pp.NumberOfPeriods + 1):
+        for i in range(pp.CurrentPeriod, pp.NumberOfPeriods + 1):
             periods.append(unified_planning.model.Object('period_%s' % i, Period))
 
-        for i in range(pp.NumberOfClients):
+        for i in range(pp.CurrentPeriod, pp.NumberOfClients):
             clients.append(unified_planning.model.Object('client_%s' % i, Client))
 
         problem.add_objects(periods)
@@ -116,9 +116,9 @@ class Planner:
         
         #Init Period Connections
         problem.set_initial_value(current_period(periods[0]), True)
-        for i in range(pp.NumberOfPeriods):
+        for i in range(pp.CurrentPeriod, pp.NumberOfPeriods):
             problem.set_initial_value(connected_periods(periods[i], periods[i + 1]), True)
-
+        
         for i in range(len(pp.InboundContracts)):
             c = pp.InboundContracts[i]
             start_p = c.period
@@ -130,10 +130,10 @@ class Planner:
             in_contracts.append(contract)
             problem.add_object(contract)
             
-            for p in range(pp.NumberOfPeriods):
+            for p in range(pp.CurrentPeriod, pp.NumberOfPeriods):
                 if (p >= min_p and p <= max_p):
                     problem.set_initial_value(direct_inbound_data(periods[p], contract), (1.0 + rate * (p - start_p)) * amount)
-        
+         
         for i in range(len(pp.OutboundContracts)):
             c = pp.OutboundContracts[i]
             start_p = c.period
