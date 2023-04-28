@@ -13,6 +13,7 @@ class Contract:
         self.client = c
         self.period = p
         self.amount = a
+        self.fixed = False #Used to force a contract with its embedded details
         self.type = t #1 for inbound, 2 for outbound
         self.max_forward_deferral = mfd
         self.max_backward_deferral = mbd

@@ -122,8 +122,8 @@ class Planner:
         for i in range(len(pp.InboundContracts)):
             c = pp.InboundContracts[i]
             start_p = c.period
-            max_p = min(pp.NumberOfPeriods - 1, c.max_forward_deferral)
-            min_p = max(0, c.max_backward_deferral)
+            max_p = c.max_forward_deferral
+            min_p = c.max_backward_deferral
             amount = c.amount
             rate = c.rate
             contract = unified_planning.model.Object('incontract_%s' % i, InContract)
@@ -137,8 +137,8 @@ class Planner:
         for i in range(len(pp.OutboundContracts)):
             c = pp.OutboundContracts[i]
             start_p = c.period
-            max_p = min(pp.NumberOfPeriods - 1, c.max_forward_deferral)
-            min_p = max(0, c.max_backward_deferral)
+            max_p = c.max_forward_deferral
+            min_p = c.max_backward_deferral
             amount = c.amount
             rate = c.rate
             contract = unified_planning.model.Object('outcontract_%s' % i, OutContract)
@@ -151,10 +151,8 @@ class Planner:
             
         #Initial Balance
         problem.set_initial_value(start_balance_at(periods[0]), pp.StartBalance)
-        problem.set_initial_value(final_balance_at(periods[0]), pp.StartBalance)
 
         #Actions
-
 
         #Action A: Execute Receiving Contract
         direct_recv_action = unified_planning.model.InstantaneousAction('direct_recv_action', at_period=Period, base_contract=InContract)
@@ -217,8 +215,6 @@ class Planner:
             unified_planning.model.metrics.MaximizeExpressionOnFinalState(final_balance_at(periods[-1]))
         )
         
-        log(problem)
-        
         #Solve
         # OLD
         # with OneshotPlanner(
@@ -237,14 +233,14 @@ class Planner:
         with OneshotPlanner(name = "enhsp-opt", ) as planner:
             planner.skip_checks = True
             result = planner.solve(problem)
-            log(result.status)
+            #log(result.status)
             if result.status == unified_planning.engines.PlanGenerationResultStatus.SOLVED_OPTIMALLY or result.status == unified_planning.engines.PlanGenerationResultStatus.SOLVED_SATISFICING:
-                log("Output Schedule using " + planner.name)
+                #log("Output Schedule using " + planner.name)
                 
                 #Create Solution
                 sol = PlanningSolution()
                 sol.CreateFromPlan(pp, result.plan)
-                #sol.Report()
+                sol.Report()
 
                 '''
                 NOTE: SIMULATION WORKS ONLY WITHOUT THE PLAN METRIC FUNCTIONS
@@ -271,7 +267,7 @@ class Planner:
                 '''
                 return sol
             else:
-                print("No plan found.", result.status)
+                #print("No plan found.", result.status)
                 return None
 
 

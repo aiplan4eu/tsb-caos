@@ -3,23 +3,30 @@ from interest_rate_prediction import InterestRatePrediction
 from common import Contract
 import random
 from math import sqrt, pi, exp
-from utilities import log
 
+scenarioIndex = 0
 
 class Scenario:
     def __init__(self, p):
+        global scenarioIndex
+        self.index = scenarioIndex
         self.problem = p
         self.solution = None
         self.probability = 1.0
         self.rates = {}
-        self.Contracts = []
+        self.contracts = []
         for c in p.clients:
             self.rates[c.name] = 1.0
+        scenarioIndex += 1
 
     def GetWeightedObjective(self):
+        if (self.solution is None):
+            return -1000.0
         return self.probability * self.solution.objective
 
     def GetObjective(self):
+        if (self.solution is None):
+            return -1000.0
         return self.solution.objective
     
     def AddRate(self, client_name, rate):
@@ -30,10 +37,10 @@ class Scenario:
         self.rates[client_name] = rate
 
     def AddContract(self, contract):
-        if (contract in self.Contracts):
+        if (contract in self.contracts):
             return
         
-        self.Contracts.append(contract)
+        self.contracts.append(contract)
 
     def GeneratePlanningProblem(self):
         p = PlanningProblem()
@@ -43,7 +50,7 @@ class Scenario:
         p.LoanRate = self.problem.LoanRate * 0.01
 
         #Identify Contracts
-        for c in self.Contracts:
+        for c in self.contracts:
             if (c.type == 1): #Inbound
                 p.InboundContracts.append(c)    
             elif (c.type == 2): #Outbound
@@ -79,9 +86,9 @@ class ScenarioGenerator:
             client = ctr.client
             
             rates = p.Rates
-            periods = [0, 1, 2, 3, 4, 5]
+            periods = [0, 1, 2, 3, 4, 5] #Deferral Options
             
-            if (InterestRatePrediction.IsClientNegotiating(client)):
+            if (InterestRatePrediction.IsClientNegotiating(client) and not ctr.fixed):
                 #Reverse in case of outbound contracts
                 if (ctr.type == 1):
                     rates = reversed(rates)
@@ -92,16 +99,18 @@ class ScenarioGenerator:
                 deferral_gap = InterestRatePrediction.GetMaxDeferralPeriods(client, periods)
                 
                 #Add contract with custom deferral and rate
-                ctr_copy = Contract(ctr.type, ctr.period, ctr.amount, ctr.client, ctr.period + deferral_gap, ctr.period - deferral_gap)
+                ctr_copy = Contract(ctr.type, ctr.period, ctr.amount, ctr.client, 
+                                    min(p.NumberOfPeriods - 1, ctr.period + deferral_gap), 
+                                    max(0, ctr.period - deferral_gap))
+                
                 ctr_copy.id = ctr.id
                 ctr_copy.rate = rate
                 scn.AddContract(ctr_copy)
-            
             else:
                 #Add contract without deferral
                 ctr_copy = Contract(ctr.type, ctr.period, ctr.amount, ctr.client, ctr.period, ctr.period)
                 ctr_copy.id = ctr.id
-                ctr_copy.rate = 0.0
+                ctr_copy.rate = 1.0
                 scn.AddContract(ctr_copy)
     
     
@@ -115,7 +124,7 @@ class ScenarioGenerator:
         
         for i in range(p.NumberOfPeriods):
             #Check of period 0
-            for c in p.Contracts:
+            for c in p.contracts:
                 if c.period == i:
                     contract_list.append(c)    
             
@@ -124,7 +133,7 @@ class ScenarioGenerator:
         
         
         for contract in contract_list:
-            rest_contracts = [c for c in p.Contracts if c != contract]
+            rest_contracts = [c for c in p.contracts if c != contract]
             
             scenarios[contract.id] = {}
 
@@ -132,8 +141,9 @@ class ScenarioGenerator:
             scenarios[contract.id][1] = {}
 
             #For single installments check the negotiation with multiple deferral periods
-            for def_period in [0, 1, 2, 3, 4, 5]:
-                if (def_period > p.NumberOfPeriods - 1):
+            #TODO: Move the deferral periods in a configuration file
+            for def_period in [1, 2, 3, 4, 5]:
+                if (def_period + contract.period > p.NumberOfPeriods - 1):
                     continue
                 
                 scenarios[contract.id][1][def_period] = {}
@@ -142,10 +152,12 @@ class ScenarioGenerator:
 
                     for j in range(p.ScenariosPerRate):
                         scn = Scenario(p)
+
+                        #Add main contract in a single installment, with the predefined rate and deferral period
                         main_ctr = Contract(contract.type, contract.period, contract.amount, contract.client, 
-                                            contract.period + def_period, contract.period - def_period)
+                                            contract.period + def_period, contract.period + def_period)
                         main_ctr.id = contract.id
-                        main_ctr.rate = rate
+                        main_ctr.rate = 0.01 * rate
                         scn.AddContract(main_ctr)
                         
                         ScenarioGenerator.PopulateScenarios(p, scn, rest_contracts)
@@ -154,33 +166,35 @@ class ScenarioGenerator:
 
 
             #Generate scenarios for multiple installments
-            #payments in 3 or in 6 installments
-            
-            for installment_num in [3, 6]:
+            for installment_num in p.Installments:
                 
-                if (installment_num > p.NumberOfPeriods):
+                #Make sure there are enough period to accomodate the multiple installments after the contract's default period
+                if (installment_num > p.NumberOfPeriods - contract.period + 1):
                     continue
                 
                 scenarios[contract.id][installment_num] = {}
                 for rate in p.Rates:
                     scenarios[contract.id][installment_num][str(rate)] = []
-
-                    for j in range(p.ScenariosPerRate):
+                    
+                    for i in range(p.ScenariosPerRate):
                         scn = Scenario(p)
 
+                        #Split main contract into multiple installments starting from the period included in the contract
                         #Add contracts for all installments
-                        main_ctr = Contract(contract.type, contract.period, contract.amount, contract.client, contract.period, contract.period)
-                        main_ctr.id = contract.id
-                        main_ctr.rate = rate
-                        scn.AddContract(main_ctr)
+                        ctr_installment_amount = (1.0 + 0.01 * rate) * contract.amount / installment_num
+                        
+                        for j in range(installment_num):
+                            main_ctr = Contract(contract.type, contract.period + j, ctr_installment_amount, contract.client, contract.period + j, contract.period + j)
+                            main_ctr.id = contract.id
+                            main_ctr.rate = 1.0 # Force a rate of 1.0 because the installment amount has been precalculated
+                            scn.AddContract(main_ctr)
                         
                         ScenarioGenerator.PopulateScenarios(p, scn, rest_contracts)
                         scenarios[contract.id][installment_num][str(rate)].append(scn)
                         scenario_count += 1
             
 
-        log("Generated " + str(scenario_count) + " Scenarios")
-        return scenarios
+        return scenarios, scenario_count
         
 
 

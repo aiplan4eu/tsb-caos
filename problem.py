@@ -5,7 +5,7 @@ from common import Contract, Client
 from matplotlib import pyplot as plt
 import json
 from multiprocessing.pool import ThreadPool
-
+from utilities import log
 
 class CAOSProblem:
     def __init__(self, ):
@@ -14,7 +14,9 @@ class CAOSProblem:
         self.StartBalance = 0
         self.LoanRate = 0.0
         
-        self.Contracts = []
+        self.contracts = []
+        self.contractMap = {}
+
         self.clients = []
         self.clientMap = {}
 
@@ -25,6 +27,7 @@ class CAOSProblem:
         self.LoanRate = instance["LoanRate"]
         self.ScenariosPerRate = instance["ScenariosPerRate"]
         self.Rates = instance["Rates"]
+        self.Installments = instance["Installments"]
         
         #Add Clients
         for c in instance["Clients"]:
@@ -50,23 +53,23 @@ class CAOSProblem:
         print("#######################")
         print("### Instance Statistics")
         print("### Total Periods:", self.NumberOfPeriods)
-        print("### Total Contracts:", len(self.Contracts))
+        print("### Total Contracts:", len(self.contracts))
         print("### Total CounterParties", len(self.clients))
         print("#######################")
         
         print("### Inbound Contracts:")
-        for c in [f for f in self.Contracts if f.type == 1]:
+        for c in [f for f in self.contracts if f.type == 1]:
             print("# \t Period: ", c.period, " Client: ", c.client.name, "Amount: ", c.amount)
         
         print("### Outbound Contracts")
-        for c in [f for f in self.Contracts if f.type == 2]:
+        for c in [f for f in self.contracts if f.type == 2]:
             print("# \t Period: ", c.period, " Client: ", c.client.name, "Amount: ", c.amount)
         
         print("#######################")
 
     def AddCounterParty(self, name, a, b, c, d):
         if (name in self.clients):
-            print("Client", name, "exists")
+            log(f'Client {name} exists', "WARNING")
             return
 
         #Create CounterParty
@@ -77,13 +80,15 @@ class CAOSProblem:
 
     def AddContract(self, client, period, amount, typ):
         ctr = Contract(typ, period, amount, client)
-        ctr.id = len(self.Contracts)
+        ctr.id = len(self.contracts)
         ctr.type = typ
-        self.Contracts.append(ctr)
+        self.contracts.append(ctr)
+        self.contractMap[ctr.id] = ctr
         self.NumberOfPeriods = max(self.NumberOfPeriods, period + 1)
     
     def GenerateScenarios(self):
-        self.scenarios = ScenarioGenerator.GenerateScenarios(self)
+        self.scenarios, scn_count = ScenarioGenerator.GenerateScenarios(self)
+        log(f'Generated {scn_count} scenarios', "INFO")
     
     def SolveScenarios(self):
         #At first add all scenarios to a list
@@ -108,33 +113,36 @@ class CAOSProblem:
         
         #Create thread pool
         processes_num = 1
-        print("Solving ", len(scenario_list), "scenarios using", processes_num, "threads")
+        log(f'Solving {len(scenario_list)} scenarios using {processes_num} threads', "INFO")
         pool = ThreadPool(processes=processes_num)
         pool.map(self.SolveScenario, scenario_list)
         pool.close()
         pool.join()
-        print("Threads Completed")
-        
+        log('Threads Completed', "INFO")
+
+
     def SolveScenario(self, s):
         #Create Planning Problem from scenario
         p = s.GeneratePlanningProblem()
-        #Cache the planning problem solution in the scenario
+        #Save the planning problem solution in the scenario
         try:
             s.solution = Planner.Solve(p)
         except Exception as ex:
-            print("ERROR EXECUTING PLAN")
-            print(ex)
-        #print(s.GetWeightedObjective())
+            log(f"Problem when solving Scenario {s.index}", "ERROR")
+            log(ex, "ERROR")
+        finally:
+            print("Done")
     
     def PostProcess(self):
         response = {}
-        for client_name in self.scenarios:
-            res = PlanEvaluator.EvaluateClient(self.clientMap[client_name], self)
-            response[client_name] = res
-            self.CreatePlot(res["Policy 1"]["Values"].keys(), res["Policy 1"]["Values"].values(), client_name + "_pol1", "Policy 1")
-            self.CreatePlot(res["Policy 2"]["Values"].keys(), res["Policy 2"]["Values"].values(), client_name + "_pol2", "Policy 2")
-            self.CreatePlot(res["Policy 3"]["Values"].keys(), res["Policy 3"]["Values"].values(), client_name + "_pol3", "Policy 3")
-
+        for contract_id in self.scenarios:
+            res = PlanEvaluator.EvaluateContract(contract_id, self)
+            
+            response[contract_id] = res
+            self.CreatePlot(res["Policy 1"]["Values"].keys(), res["Policy 1"]["Values"].values(), str(ctr.id) + "_pol1", "Policy 1")
+            self.CreatePlot(res["Policy 2"]["Values"].keys(), res["Policy 2"]["Values"].values(), str(ctr.id) + "_pol2", "Policy 2")
+            self.CreatePlot(res["Policy 3"]["Values"].keys(), res["Policy 3"]["Values"].values(), str(ctr.id) + "_pol3", "Policy 3")
+        
         f = open("report.txt", "w")
         f.write(json.dumps(response))
         f.close()

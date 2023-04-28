@@ -37,9 +37,9 @@ class InterestRatePrediction:
             sample_num = random.random()
             
             if (sample_num < r_prob):
-                return r
+                return 0.01 * r #Normalize rate from 0-100 to 0-1
         
-        return 0.0
+        return 1.0
 
     def GetMaxDeferralPeriods(c, periods):
         for p in periods:
@@ -53,4 +53,5 @@ class InterestRatePrediction:
     
     @staticmethod
     def IsClientNegotiating(c):
-        return random.random() < c.negotiation_preference
+        val = random.random() < c.negotiation_preference
+        return val
