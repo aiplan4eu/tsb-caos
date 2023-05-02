@@ -92,9 +92,9 @@ class ScenarioGenerator:
             
             if (InterestRatePrediction.IsClientNegotiating(client) and not ctr.fixed):
                 #Reverse in case of outbound contracts
-                if (ctr.type == 1):
+                if (ctr.type == ContractType.INBOUND):
                     rates = reversed(rates)
-                elif (ctr.type == 2):
+                elif (ctr.type == ContractType.OUTBOUND):
                     periods = reversed(periods)
                 
                 rate, r_prob = InterestRatePrediction.GetInterestRateForClient(client, rates)
@@ -128,7 +128,7 @@ class ScenarioGenerator:
         #Check for contracts of the current period
         for c in p.contracts:
             if c.period == p.CurrentPeriod and c.status == ContractStatus.UNDER_NEGOTATION:
-                contract_list.append(c)    
+                contract_list.append(c)
         
         for contract in contract_list:
             rest_contracts = [c for c in p.contracts if c != contract and c.period >= p.CurrentPeriod and c.status != ContractStatus.FINALIZED]
@@ -193,8 +193,9 @@ class ScenarioGenerator:
                         ScenarioGenerator.PopulateScenarios(p, scn, rest_contracts)
                         scenarios[contract.id][installment_num][str(rate)].append(scn)
                         scenario_count += 1
-            
 
+            break #STUDY THE FIRST FOUND CONTRACT FOR PERIOD 0
+        
         return scenarios, scenario_count
         
 

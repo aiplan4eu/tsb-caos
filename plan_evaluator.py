@@ -88,21 +88,21 @@ class PlanEvaluator:
         best_plan = None
         
         if (policy_id == 1): #Weighted Objective
-            best_score = 0
+            best_score = -10000000
             for p in plan_list:
                 if (p.weighted_objective > best_score):
                     best_plan = p
                     best_score = p.weighted_objective
         
         elif (policy_id == 2):
-            best_score = 0
+            best_score = -10000000
             for p in plan_list:
                 if (p.objective > best_score):
                     best_plan = p
                     best_score = p.objective
         
         elif (policy_id == 3):
-            best_score = 0
+            best_score = -10000000
             for p in plan_list:
                 if (p.probability > best_score):
                     best_plan = p

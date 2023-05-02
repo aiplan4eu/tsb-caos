@@ -5,7 +5,9 @@ from common import Contract, Client, ContractStatus, ContractType
 from matplotlib import pyplot as plt
 import json
 from multiprocessing.pool import ThreadPool
-from utilities import log
+from utilities import log, random
+import time
+
 
 
 class CAOSProblem:
@@ -25,6 +27,70 @@ class CAOSProblem:
 
         self.scenarios = []
         
+
+    def CreateRandomInstance(self):
+        self.StartBalance = 0
+        self.LoanRate = 1.0 + 2 * random.random()
+        self.ScenariosPerRate = 20
+        self.Rates = [v * 0.5 for v in range(2, 16)]
+        self.Installments = [3, 6]
+        
+        max_periods = 10 * max(1, random.random())
+        
+        #Add Clients
+        client_num = random.randint(10, 20)
+        for c in range(client_num):
+            self.AddCounterParty("Client" + str(c), 
+                                 0.5 + 3.0 * random.random(),
+                                 1.5 + 4.5 * random.random(),
+                                 max(1.0, min(0.5, 0.5 + random.random())),
+                                 max(1.0, min(0.25, 0.25 + random.random())))
+        
+        self.NumberOfClients = len(self.clients) # Calculate the correct number of clients
+        total_contracts = random.randint(20, 50)
+        
+        for i in range(total_contracts):
+            if random.random() > 0.5:
+                contract_type = ContractType.INBOUND
+            else:
+                contract_type = ContractType.OUTBOUND
+
+            contract_amount = 1000 * random.randint(1, 6)
+            client = self.clients[random.randint(0, len(self.clients) - 1)]
+            
+            self.AddContract(client, random.randint(0, max_periods), contract_amount, contract_type)
+        
+    def ExportInstance(self):
+        #Save Instance to file
+        data = {}
+        data["StartBalance"] = self.StartBalance
+        data["LoanRate"] = self.LoanRate
+        data["Rates"] = self.Rates
+        data["Installments"] = self.Installments
+        data["ScenariosPerRate"] = self.ScenariosPerRate
+        
+        data["Clients"] = {}
+        for c in self.clients:
+            data["Clients"][c.name] = {"a": c.alpha, 
+                                       "b": c.beta, 
+                                       "negotiation_preference": c.negotiation_preference,
+                                       "deferral_openess": c.deferral_openess}
+        
+
+        data["Contracts"] = {}
+        data["Contracts"]["Inbound"] = []
+        data["Contracts"]["Outbound"] = []
+        for c in self.contracts:
+            if (c.type == ContractType.INBOUND):
+                data["Contracts"]["Inbound"].append({"client": c.client.name, "period": c.period, "amount": c.amount})
+            elif (c.type == ContractType.OUTBOUND):
+                data["Contracts"]["Outbound"].append({"client": c.client.name, "period": c.period, "amount": c.amount})
+        
+        f = open("gen_data.json", "w")
+        f.write(json.dumps(data))
+        f.close()
+    
+
     def LoadInstance(self, instance):
         self.StartBalance = instance["StartBalance"]
         self.LoanRate = instance["LoanRate"]
@@ -169,15 +235,15 @@ class CAOSProblem:
         #     self.SolveScenario(s)
         
         #Create thread pool
-        processes_num = 1
+        processes_num = 8
+        st = time.time()
         log(f'Solving {len(scenario_list)} scenarios using {processes_num} threads', "INFO")
         pool = ThreadPool(processes=processes_num)
         pool.map(self.SolveScenario, scenario_list)
         pool.close()
         pool.join()
-        log('Threads Completed', "INFO")
-
-
+        log(f'Solving Completed in {time.time() - st} seconds', "INFO")
+    
     def SolveScenario(self, s):
         #Create Planning Problem from scenario
         p = s.GeneratePlanningProblem()
@@ -243,5 +309,11 @@ class CAOSProblem:
         #Generate Scenarios
         self.GenerateScenarios()
         self.SolveScenarios()
-        self.PostProcess()
+        
 
+
+
+if (__name__ == "__main__"):
+    p = CAOSProblem()
+    p.CreateRandomInstance()
+    p.ExportInstance()

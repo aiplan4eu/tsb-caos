@@ -1,0 +1,289 @@
+{
+    "StartBalance": 0,
+    "LoanRate": 2.8497305032518905,
+    "Rates": [
+        1.0,
+        1.5,
+        2.0,
+        2.5,
+        3.0,
+        3.5,
+        4.0,
+        4.5,
+        5.0,
+        5.5,
+        6.0,
+        6.5,
+        7.0,
+        7.5
+    ],
+    "Installments": [
+        3,
+        6
+    ],
+    "ScenariosPerRate": 10,
+    "Clients": {
+        "Client0": {
+            "a": 0.5512298030859355,
+            "b": 2.880347620001907,
+            "negotiation_preference": 0.8791850099719167,
+            "deferral_openess": 0.6080798441939275
+        },
+        "Client1": {
+            "a": 2.6778629763125736,
+            "b": 2.7032187283082383,
+            "negotiation_preference": 0.5140759663361248,
+            "deferral_openess": 0.8701605458187531
+        },
+        "Client2": {
+            "a": 3.204973996239162,
+            "b": 1.9765489167420816,
+            "negotiation_preference": 1.0,
+            "deferral_openess": 0.7482408763561276
+        },
+        "Client3": {
+            "a": 0.5587386678002906,
+            "b": 4.324496170907771,
+            "negotiation_preference": 0.931293773345622,
+            "deferral_openess": 1.0
+        },
+        "Client4": {
+            "a": 1.1168802406587233,
+            "b": 1.658893545352337,
+            "negotiation_preference": 0.869105649425929,
+            "deferral_openess": 0.4219306157603223
+        },
+        "Client5": {
+            "a": 1.1481358476892536,
+            "b": 4.808447566871093,
+            "negotiation_preference": 1.0,
+            "deferral_openess": 1.0
+        },
+        "Client6": {
+            "a": 3.4056846925328697,
+            "b": 2.765732846948463,
+            "negotiation_preference": 1.0,
+            "deferral_openess": 0.8229855901430257
+        },
+        "Client7": {
+            "a": 2.942826654182369,
+            "b": 2.299342835177578,
+            "negotiation_preference": 0.9830841838613874,
+            "deferral_openess": 1.0
+        },
+        "Client8": {
+            "a": 2.527172818237062,
+            "b": 2.2361317002708567,
+            "negotiation_preference": 1.0,
+            "deferral_openess": 0.7835866832987394
+        },
+        "Client9": {
+            "a": 2.520106028375182,
+            "b": 3.840303915591801,
+            "negotiation_preference": 1.0,
+            "deferral_openess": 0.3323271356419041
+        },
+        "Client10": {
+            "a": 1.7784273409604987,
+            "b": 4.056045489311517,
+            "negotiation_preference": 1.0,
+            "deferral_openess": 0.5305809439768133
+        }
+    },
+    "Contracts": {
+        "Inbound": [
+            {
+                "client": "Client3",
+                "period": 5,
+                "amount": 4000
+            },
+            {
+                "client": "Client9",
+                "period": 1,
+                "amount": 6000
+            },
+            {
+                "client": "Client7",
+                "period": 0,
+                "amount": 2000
+            },
+            {
+                "client": "Client0",
+                "period": 8,
+                "amount": 6000
+            },
+            {
+                "client": "Client1",
+                "period": 5,
+                "amount": 4000
+            },
+            {
+                "client": "Client6",
+                "period": 1,
+                "amount": 5000
+            },
+            {
+                "client": "Client3",
+                "period": 8,
+                "amount": 6000
+            },
+            {
+                "client": "Client4",
+                "period": 1,
+                "amount": 1000
+            },
+            {
+                "client": "Client3",
+                "period": 2,
+                "amount": 4000
+            },
+            {
+                "client": "Client5",
+                "period": 8,
+                "amount": 1000
+            },
+            {
+                "client": "Client3",
+                "period": 8,
+                "amount": 1000
+            },
+            {
+                "client": "Client4",
+                "period": 0,
+                "amount": 4000
+            },
+            {
+                "client": "Client6",
+                "period": 1,
+                "amount": 6000
+            },
+            {
+                "client": "Client8",
+                "period": 2,
+                "amount": 5000
+            },
+            {
+                "client": "Client4",
+                "period": 1,
+                "amount": 3000
+            },
+            {
+                "client": "Client7",
+                "period": 9,
+                "amount": 6000
+            }
+        ],
+        "Outbound": [
+            {
+                "client": "Client4",
+                "period": 8,
+                "amount": 3000
+            },
+            {
+                "client": "Client8",
+                "period": 3,
+                "amount": 4000
+            },
+            {
+                "client": "Client9",
+                "period": 1,
+                "amount": 1000
+            },
+            {
+                "client": "Client6",
+                "period": 0,
+                "amount": 4000
+            },
+            {
+                "client": "Client10",
+                "period": 0,
+                "amount": 2000
+            },
+            {
+                "client": "Client7",
+                "period": 3,
+                "amount": 4000
+            },
+            {
+                "client": "Client7",
+                "period": 8,
+                "amount": 3000
+            },
+            {
+                "client": "Client4",
+                "period": 3,
+                "amount": 4000
+            },
+            {
+                "client": "Client8",
+                "period": 10,
+                "amount": 5000
+            },
+            {
+                "client": "Client8",
+                "period": 3,
+                "amount": 5000
+            },
+            {
+                "client": "Client2",
+                "period": 0,
+                "amount": 4000
+            },
+            {
+                "client": "Client10",
+                "period": 6,
+                "amount": 3000
+            },
+            {
+                "client": "Client4",
+                "period": 8,
+                "amount": 4000
+            },
+            {
+                "client": "Client5",
+                "period": 8,
+                "amount": 2000
+            },
+            {
+                "client": "Client2",
+                "period": 6,
+                "amount": 1000
+            },
+            {
+                "client": "Client0",
+                "period": 2,
+                "amount": 6000
+            },
+            {
+                "client": "Client7",
+                "period": 9,
+                "amount": 3000
+            },
+            {
+                "client": "Client7",
+                "period": 6,
+                "amount": 1000
+            },
+            {
+                "client": "Client5",
+                "period": 6,
+                "amount": 6000
+            },
+            {
+                "client": "Client4",
+                "period": 5,
+                "amount": 3000
+            },
+            {
+                "client": "Client6",
+                "period": 10,
+                "amount": 1000
+            },
+            {
+                "client": "Client4",
+                "period": 8,
+                "amount": 5000
+            }
+        ]
+    }
+}
