@@ -120,19 +120,20 @@ class CAOSProblem:
 
     def Report(self):
         print("#######################")
-        print("### Instance Statistics")
-        print("### Total Periods:", self.PlanningHorizonEnd)
+        print("### Statistics")
+        print(f"### Current Balance: {self.Balance}")
+        print(f"### Current Period: {self.CurrentPeriod} / {self.PlanningHorizonEnd}")
         print("### Total Contracts:", len(self.contracts))
         print("### Total CounterParties", len(self.clients))
         print("#######################")
         
         print("### Inbound Contracts:")
         for c in [f for f in self.contracts if f.type == ContractType.INBOUND]:
-            print(f"#\t ID: {c.id} \t Period: {c.period} \t Client: {c.client.name:<8} \t Amount: {c.amount} \t Type: {c.status}")
+            print(f"#\t ID: {c.id:03d} \t Period: {c.period:03d} \t Client: {c.client.name:<8} \t Amount: {c.amount:07.3f} \t Type: {c.status:<10}")
             
         print("### Outbound Contracts")
         for c in [f for f in self.contracts if f.type == ContractType.OUTBOUND]:
-            print(f"#\t ID: {c.id} \t Period: {c.period} \t Client: {c.client.name:<8} \t Amount: {c.amount} \t Type: {c.status}")
+            print(f"#\t ID: {c.id:03d} \t Period: {c.period:03d} \t Client: {c.client.name:<8} \t Amount: {c.amount:07.3f} \t Type: {c.status:<10}")
         
         print("#######################")
 
@@ -191,7 +192,7 @@ class CAOSProblem:
                     self.Balance += updated_amount
                 elif (contract.type == ContractType.OUTBOUND):
                     self.Balance -= updated_amount
-                print("Contract Finalized!")
+                print(f"Contract {contract.id} Finalized!")
             else:
                 #Just apply new settings to the contract
                 contract.period = f_deferral
@@ -203,8 +204,8 @@ class CAOSProblem:
         
     def AdvancePeriod(self):
         for c in self.contracts:
-            if (c.period == self.CurrentPeriod):
-                print("Unable to advance schedule, non finalized contracts exist")
+            if (c.period == self.CurrentPeriod and c.status != ContractStatus.FINALIZED):
+                print(f"Unable to advance schedule, non finalized contracts exist {c.id}")
                 return
         self.CurrentPeriod += 1
 
@@ -235,7 +236,7 @@ class CAOSProblem:
         #     self.SolveScenario(s)
         
         #Create thread pool
-        processes_num = 8
+        processes_num = 1
         st = time.time()
         log(f'Solving {len(scenario_list)} scenarios using {processes_num} threads', "INFO")
         pool = ThreadPool(processes=processes_num)

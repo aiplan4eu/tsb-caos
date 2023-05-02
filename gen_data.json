@@ -21,7 +21,7 @@
         3,
         6
     ],
-    "ScenariosPerRate": 10,
+    "ScenariosPerRate": 5,
     "Clients": {
         "Client0": {
             "a": 0.5512298030859355,

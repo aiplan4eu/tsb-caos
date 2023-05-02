@@ -101,21 +101,22 @@ class Planner:
 
         #Initialize
         clients = []
-        periods = []
+        periods = {}
         in_contracts = []
         out_contracts = []
         for i in range(pp.CurrentPeriod, pp.NumberOfPeriods + 1):
-            periods.append(unified_planning.model.Object('period_%s' % i, Period))
+            periods[i] = unified_planning.model.Object('period_%s' % i, Period)
 
         for i in range(pp.CurrentPeriod, pp.NumberOfClients):
             clients.append(unified_planning.model.Object('client_%s' % i, Client))
 
-        problem.add_objects(periods)
+        problem.add_objects(periods.values())
         problem.add_objects(clients)
 
         
         #Init Period Connections
-        problem.set_initial_value(current_period(periods[0]), True)
+        problem.set_initial_value(current_period(periods[pp.CurrentPeriod]), True)
+        
         for i in range(pp.CurrentPeriod, pp.NumberOfPeriods):
             problem.set_initial_value(connected_periods(periods[i], periods[i + 1]), True)
         
@@ -123,7 +124,7 @@ class Planner:
             c = pp.InboundContracts[i]
             start_p = c.period
             max_p = c.max_forward_deferral
-            min_p = c.max_backward_deferral
+            min_p = max(pp.CurrentPeriod, c.max_backward_deferral)
             amount = c.amount
             rate = c.rate
             contract = unified_planning.model.Object('incontract_%s' % i, InContract)
@@ -138,7 +139,7 @@ class Planner:
             c = pp.OutboundContracts[i]
             start_p = c.period
             max_p = c.max_forward_deferral
-            min_p = c.max_backward_deferral
+            min_p = max(pp.CurrentPeriod, c.max_backward_deferral)
             amount = c.amount
             rate = c.rate
             contract = unified_planning.model.Object('outcontract_%s' % i, OutContract)
@@ -150,7 +151,7 @@ class Planner:
                     problem.set_initial_value(direct_outbound_data(periods[p], contract), (1.0 + rate * (p - start_p)) * amount)
             
         #Initial Balance
-        problem.set_initial_value(start_balance_at(periods[0]), pp.StartBalance)
+        problem.set_initial_value(start_balance_at(periods[pp.CurrentPeriod]), pp.StartBalance)
 
         #Actions
 
@@ -201,7 +202,7 @@ class Planner:
         #    problem.add_goal(GE(final_balance_at(p), 0))
 
         #Make sure to advance to the final period
-        problem.add_goal(current_period(periods[-1]))
+        problem.add_goal(current_period(periods[pp.NumberOfPeriods - 1]))
 
         #Make sure that all contracts have been addressed
         for c in in_contracts:
@@ -212,7 +213,7 @@ class Planner:
 
         #Cost Maximization 
         problem.add_quality_metric(
-            unified_planning.model.metrics.MaximizeExpressionOnFinalState(final_balance_at(periods[-1]))
+            unified_planning.model.metrics.MaximizeExpressionOnFinalState(final_balance_at(periods[pp.NumberOfPeriods - 1]))
         )
         
         #Solve
