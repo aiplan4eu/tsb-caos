@@ -124,31 +124,44 @@ class Planner:
             c = pp.InboundContracts[i]
             start_p = c.period
             max_p = c.max_forward_deferral
-            min_p = max(pp.CurrentPeriod, c.max_backward_deferral)
+            min_p = c.max_backward_deferral
             amount = c.amount
             rate = c.rate
             contract = unified_planning.model.Object('incontract_%s' % i, InContract)
             in_contracts.append(contract)
             problem.add_object(contract)
             
+            data_set = False
+
             for p in range(pp.CurrentPeriod, pp.NumberOfPeriods):
                 if (p >= min_p and p <= max_p):
                     problem.set_initial_value(direct_inbound_data(periods[p], contract), (1.0 + rate * (p - start_p)) * amount)
+                    data_set = True
+
+            if not data_set:
+                print("ERROR NO DATA SET FOR CONTRACT IN PLANNING MODEL")
+                assert(data_set)
          
         for i in range(len(pp.OutboundContracts)):
             c = pp.OutboundContracts[i]
             start_p = c.period
             max_p = c.max_forward_deferral
-            min_p = max(pp.CurrentPeriod, c.max_backward_deferral)
+            min_p = c.max_backward_deferral
             amount = c.amount
             rate = c.rate
             contract = unified_planning.model.Object('outcontract_%s' % i, OutContract)
             out_contracts.append(contract)
             problem.add_object(contract)
             
+            data_set = False
             for p in range(pp.NumberOfPeriods):
                 if (p >= min_p and p <= max_p):
                     problem.set_initial_value(direct_outbound_data(periods[p], contract), (1.0 + rate * (p - start_p)) * amount)
+                    data_set = True
+
+            if not data_set:
+                print("ERROR NO DATA SET FOR CONTRACT IN PLANNING MODEL")
+                assert(data_set)
             
         #Initial Balance
         problem.set_initial_value(start_balance_at(periods[pp.CurrentPeriod]), pp.StartBalance)
@@ -202,7 +215,7 @@ class Planner:
         #    problem.add_goal(GE(final_balance_at(p), 0))
 
         #Make sure to advance to the final period
-        problem.add_goal(current_period(periods[pp.NumberOfPeriods - 1]))
+        problem.add_goal(current_period(periods[pp.NumberOfPeriods]))
 
         #Make sure that all contracts have been addressed
         for c in in_contracts:
@@ -213,7 +226,7 @@ class Planner:
 
         #Cost Maximization 
         problem.add_quality_metric(
-            unified_planning.model.metrics.MaximizeExpressionOnFinalState(final_balance_at(periods[pp.NumberOfPeriods - 1]))
+            unified_planning.model.metrics.MaximizeExpressionOnFinalState(final_balance_at(periods[pp.NumberOfPeriods]))
         )
         
         #Solve

@@ -129,11 +129,11 @@ class CAOSProblem:
         
         print("### Inbound Contracts:")
         for c in [f for f in self.contracts if f.type == ContractType.INBOUND]:
-            print(f"#\t ID: {c.id:03d} \t Period: {c.period:03d} \t Client: {c.client.name:<8} \t Amount: {c.amount:07.3f} \t Type: {c.status:<10}")
+            print(f"#\t ID: {c.id:03d} \t Period: {c.period:03d} \t Client: {c.client.name:<8} \t Amount: {c.amount:07.2f} \t Type: {c.status:<10}")
             
         print("### Outbound Contracts")
         for c in [f for f in self.contracts if f.type == ContractType.OUTBOUND]:
-            print(f"#\t ID: {c.id:03d} \t Period: {c.period:03d} \t Client: {c.client.name:<8} \t Amount: {c.amount:07.3f} \t Type: {c.status:<10}")
+            print(f"#\t ID: {c.id:03d} \t Period: {c.period:03d} \t Client: {c.client.name:<8} \t Amount: {c.amount:07.2f} \t Type: {c.status:<10}")
         
         print("#######################")
 
@@ -155,7 +155,8 @@ class CAOSProblem:
         self.contracts.append(ctr)
         self.contractMap[ctr.id] = ctr
         self.PlanningHorizonEnd = max(self.PlanningHorizonEnd, period + 1)
-        CAOSProblem.CONTRACT_COUNTER +=1
+        CAOSProblem.CONTRACT_COUNTER += 1
+        return ctr
 
     def UpdateContract(self, contract, f_deferral, f_rate, f_installments):
         #Checks
@@ -174,6 +175,11 @@ class CAOSProblem:
             log("Finalizing a future contract is not yet supported", "WARNING")
             return
 
+        if (contract.status == ContractStatus.COMPLETED):
+            print("Contract already finalized. Check log")
+            log("Processing of completed contracts is not yet supported", "WARNING")
+            return
+
         #Finalize contract
         if (f_installments == 1):
             #In the case of 1 installment for a contract of the current period
@@ -183,29 +189,48 @@ class CAOSProblem:
             updated_amount = (1.0 + 0.01 * f_rate * (f_deferral - contract.period)) * contract.amount
 
             if (f_deferral == self.CurrentPeriod):
-                #Update contract parameters
-                contract.status = ContractStatus.FINALIZED
-                contract.amount = updated_amount
-                contract.rate = f_rate
-            
+                
+                #Update balance with the new amount
                 if (contract.type == ContractType.INBOUND):
                     self.Balance += updated_amount
                 elif (contract.type == ContractType.OUTBOUND):
                     self.Balance -= updated_amount
-                print(f"Contract {contract.id} Finalized!")
+                
+                #Update contract parameters
+                contract.status = ContractStatus.COMPLETED
+                contract.amount = updated_amount
+                contract.rate = f_rate
+                print(f"Contract {contract.id} Completed!")
             else:
                 #Just apply new settings to the contract
                 contract.period = f_deferral
                 contract.amount = updated_amount
                 contract.rate = 1.0
         else:
-            print("TODO")
-            assert(False)
+            updated_amount = (1.0 + 0.01 * f_rate) * contract.amount
+            installment_amount = updated_amount / f_installments
+
+            # Update main contract
+            contract.amount = installment_amount
+            contract.rate = 1.0
+            contract.max_backward_deferral = contract.period
+            contract.max_forward_deferral = contract.period
+            self.UpdateContract(contract, contract.period, 1.0, 1)
+
+            # Add remaining installments
+            for i in range(f_installments - 1):
+                new_ctr = self.AddContract(contract.client, contract.period + i + 1, installment_amount, contract.type)
+                new_ctr.max_backward_deferral = contract.period + i + 1
+                new_ctr.max_forward_deferral = contract.period + i + 1
+                new_ctr.status = ContractStatus.NEGOTIATED
         
+
+
+
     def AdvancePeriod(self):
         for c in self.contracts:
-            if (c.period == self.CurrentPeriod and c.status != ContractStatus.FINALIZED):
-                print(f"Unable to advance schedule, non finalized contracts exist {c.id}")
+            if (c.period == self.CurrentPeriod and c.status != ContractStatus.COMPLETED):
+                print(f"Unable to advance schedule, non completed contracts exist {c.id}")
                 return
         self.CurrentPeriod += 1
 
@@ -230,13 +255,8 @@ class CAOSProblem:
                         for s in self.scenarios[ctr][inst][r]:
                             scenario_list.append(s)
 
-        #Solve Sequentially
-        # for s in scenario_list:
-
-        #     self.SolveScenario(s)
-        
         #Create thread pool
-        processes_num = 1
+        processes_num = 4
         st = time.time()
         log(f'Solving {len(scenario_list)} scenarios using {processes_num} threads', "INFO")
         pool = ThreadPool(processes=processes_num)

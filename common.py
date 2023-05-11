@@ -16,8 +16,9 @@ class Payment:
         self.amount = 0
 
 class ContractStatus(Enum):
-    UNDER_NEGOTATION = 0
-    FINALIZED = 1
+    UNDER_NEGOTIATION = 0
+    NEGOTIATED = 1
+    COMPLETED = 2
 
 class ContractType(Enum):
     INBOUND = 0, 
@@ -33,7 +34,7 @@ class Contract:
         self.amount = a
         self.fixed = False # Used to force a contract with its embedded details
         self.type = t
-        self.status = ContractStatus.UNDER_NEGOTATION
+        self.status = ContractStatus.UNDER_NEGOTIATION
         self.max_forward_deferral = mfd
         self.max_backward_deferral = mbd
 

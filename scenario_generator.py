@@ -93,17 +93,20 @@ class ScenarioGenerator:
             if (InterestRatePrediction.IsClientNegotiating(client) and not ctr.fixed):
                 #Reverse in case of outbound contracts
                 if (ctr.type == ContractType.INBOUND):
-                    rates = reversed(rates)
+                    rates = list(reversed(rates))
                 elif (ctr.type == ContractType.OUTBOUND):
                     periods = reversed(periods)
                 
-                rate, r_prob = InterestRatePrediction.GetInterestRateForClient(client, rates)
+                rate, r_prob = InterestRatePrediction.GetInterestRateForClient(client, rates, 0.5, 1.0)
                 deferral_gap, def_prob = InterestRatePrediction.GetMaxDeferralPeriods(client, periods)
                 
+                if (r_prob < 1e-14 or def_prob < 1e-14):
+                    print("CHECK")
+
                 #Add contract with custom deferral and rate
                 ctr_copy = Contract(ctr.type, ctr.period, ctr.amount, ctr.client, 
                                     min(p.PlanningHorizonEnd - 1, ctr.period + deferral_gap), 
-                                    max(0, ctr.period - deferral_gap))
+                                    max(p.CurrentPeriod, ctr.period - deferral_gap))
                 
                 ctr_copy.id = ctr.id
                 ctr_copy.rate = rate
@@ -127,11 +130,11 @@ class ScenarioGenerator:
         
         #Check for contracts of the current period
         for c in p.contracts:
-            if c.period == p.CurrentPeriod and c.status == ContractStatus.UNDER_NEGOTATION:
+            if c.period == p.CurrentPeriod and c.status != ContractStatus.COMPLETED:
                 contract_list.append(c)
         
         for contract in contract_list:
-            rest_contracts = [c for c in p.contracts if c != contract and c.period >= p.CurrentPeriod and c.status != ContractStatus.FINALIZED]
+            rest_contracts = [c for c in p.contracts if c != contract and c.period >= p.CurrentPeriod and c.status != ContractStatus.COMPLETED]
             
             scenarios[contract.id] = {}
 
@@ -150,20 +153,30 @@ class ScenarioGenerator:
 
                     for j in range(p.ScenariosPerRate):
                         scn = Scenario(p)
+                        
+                        #Scenario Probability Precheck
+                        r_prob = InterestRatePrediction.FindRateProbability(contract.client, rate)
+                        d_prob = InterestRatePrediction.FindDeferralProbability(contract.client, def_period)
+                        
+                        if (r_prob * d_prob < 1e-5):
+                            continue
 
                         #Add main contract in a single installment, with the predefined rate and deferral period
                         main_ctr = Contract(contract.type, contract.period, contract.amount, contract.client, 
                                             contract.period + def_period, contract.period + def_period)
                         main_ctr.id = contract.id
                         main_ctr.rate = 0.01 * rate
-                        scn.probability *= InterestRatePrediction.FindRateProbability(contract.client, rate) * InterestRatePrediction.FindDeferralProbability(contract.client, def_period)
+                        scn.probability *= r_prob * d_prob 
+                        
                         scn.AddContract(main_ctr)
                         
                         ScenarioGenerator.PopulateScenarios(p, scn, rest_contracts)
+                        #print(f"Generated Scenarion prob: {scn.probability * 100.0:.2E}")
+                        
                         scenarios[contract.id][1][def_period][str(rate)].append(scn)
                         scenario_count += 1
+                        
 
-            
             #Generate scenarios for multiple installments
             for installment_num in p.Installments:
                 

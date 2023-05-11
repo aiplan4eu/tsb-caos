@@ -31,26 +31,40 @@ class InterestRatePrediction:
 
 
     @staticmethod   
-    def GetInterestRateForClient(c, rates):
+    def GetInterestRateForClient(c, rates, min_sample, max_sample):
+        sample_num = min(max(random.random(), min_sample), max_sample)
+        
+        t_sum = sum([InterestRatePrediction.FindRateProbability(c, r) for r in rates])
+        t_sum_inv = 1.0 / t_sum
+        t_val = 0.0
+
         for r in rates:
             r_prob = InterestRatePrediction.FindRateProbability(c, r)
-            sample_num = random.random()
-            
-            if (sample_num < r_prob):
+            t_val += r_prob * t_sum_inv
+            if (sample_num > t_val):
+                continue
+            else:
                 return (0.01 * r, r_prob) #Normalize rate from 0-100 to 0-1
         
         return (1.0, 1.0)
 
     def GetMaxDeferralPeriods(c, periods):
+        sample_num = random.random()
+        t_sum = sum([InterestRatePrediction.FindDeferralProbability(c, p) for p in periods])
+        t_sum_inv = 1.0 / t_sum
+        t_val = 0.0
+
         for p in periods:
             r_prob = InterestRatePrediction.FindDeferralProbability(c, p)
-            sample_num = random.random()
             
-            if (sample_num < r_prob):
-                return (p, r_prob)
+            t_val += r_prob * t_sum_inv
+            if (sample_num > t_val):
+                continue
+            else:
+                return (p, r_prob) #Normalize rate from 0-100 to 0-1
+        
         return (0, 1.0)
 
-    
     @staticmethod
     def IsClientNegotiating(c):
         val = random.random() < c.negotiation_preference
