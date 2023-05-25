@@ -1,7 +1,7 @@
 from scenario_generator import ScenarioGenerator
 from plan_evaluator import PlanEvaluator
 from planner import Planner
-from common import Contract, Client, ContractStatus, ContractType
+from common import Contract, Payment, Client, ContractStatus, ContractType
 from matplotlib import pyplot as plt
 import json
 from multiprocessing.pool import ThreadPool
@@ -109,13 +109,23 @@ class CAOSProblem:
         for c in instance["Contracts"]["Inbound"]:
             client = self.clientMap[c["client"]]
             # NOTE: periods are zero indexed
-            self.AddContract(client, c["period"], c["amount"], ContractType.INBOUND)
-
+            
+            ctr = Contract(ContractType.INBOUND, client)
+            #By default add a single payment for now
+            pmnt =  Payment(ctr, c["period"], c["amount"])
+            ctr.AddPayment(pmnt)
+            self.AddContract(ctr)
+        
         #Add Outbound Contracts
         for c in instance["Contracts"]["Outbound"]:
             client = self.clientMap[c["client"]]
             # NOTE: periods are zero indexed
-            self.AddContract(client, c["period"], c["amount"], ContractType.OUTBOUND)
+
+            ctr = Contract(ContractType.OUTBOUND, client)
+            #By default add a single payment for now
+            pmnt = Payment(ctr, c["period"], c["amount"])
+            ctr.AddPayment(pmnt)
+            self.AddContract(ctr)
 
 
     def Report(self):
@@ -129,11 +139,19 @@ class CAOSProblem:
         
         print("### Inbound Contracts:")
         for c in [f for f in self.contracts if f.type == ContractType.INBOUND]:
-            print(f"#\t ID: {c.id:03d} \t Period: {c.period:03d} \t Client: {c.client.name:<8} \t Amount: {c.amount:07.2f} \t Type: {c.status:<10}")
+            print(
+                f"#\t ID: {c.id:03d} \t Client: {c.client.name:<8} \t Status: {c.status:<10}")
+            for p in c.installments:
+                print(
+                    f"#\t\t Period: {p.period:03d} \t Amount: {p.amount:07.2f} \t Status: {p.status:<10}")
             
         print("### Outbound Contracts")
         for c in [f for f in self.contracts if f.type == ContractType.OUTBOUND]:
-            print(f"#\t ID: {c.id:03d} \t Period: {c.period:03d} \t Client: {c.client.name:<8} \t Amount: {c.amount:07.2f} \t Type: {c.status:<10}")
+            print(
+                f"#\t ID: {c.id:03d} \t Client: {c.client.name:<8} \t Status: {c.status:<10}")
+            for p in c.installments:
+                print(
+                    f"#\t\t Period: {p.period:03d} \t Amount: {p.amount:07.2f} \t Status: {p.status:<10}")
         
         print("#######################")
 
@@ -148,16 +166,21 @@ class CAOSProblem:
         self.clients.append(c) # Client List
         self.clientMap[name] = c # Client Dictionary using their name as the key
 
-    def AddContract(self, client, period, amount, typ):
-        ctr = Contract(typ, period, amount, client)
+    def AddContract(self, ctr):
         ctr.id = CAOSProblem.CONTRACT_COUNTER
-        ctr.type = typ
         self.contracts.append(ctr)
         self.contractMap[ctr.id] = ctr
-        self.PlanningHorizonEnd = max(self.PlanningHorizonEnd, period + 1)
         CAOSProblem.CONTRACT_COUNTER += 1
+        self.UpdatePlanningHorizon()
         return ctr
 
+    def UpdatePlanningHorizon(self):
+        self.PlanningHorizonEnd = 0
+        for ctr in self.contracts:
+            ctr.UpdatePlanningHorizon() #Update individual contract planning horizons
+            self.PlanningHorizonEnd = max(self.PlanningHorizonEnd, ctr.PlanningHorizonEnd)
+                
+    
     def UpdateContract(self, contract, f_deferral, f_rate, f_installments):
         #Checks
         if not isinstance(contract, Contract):
@@ -256,7 +279,7 @@ class CAOSProblem:
                             scenario_list.append(s)
 
         #Create thread pool
-        processes_num = 4
+        processes_num = 1
         st = time.time()
         log(f'Solving {len(scenario_list)} scenarios using {processes_num} threads', "INFO")
         pool = ThreadPool(processes=processes_num)
@@ -326,10 +349,14 @@ class CAOSProblem:
         plt.title("Rate recommendation for " + policy)
         f.savefig(figname, dpi=600)
 
-    def Solve(self):
+
+    def GenerateActions(self):
         #Generate Scenarios
         self.GenerateScenarios()
+        #Solve Them
         self.SolveScenarios()
+        #Post Process
+        return self.PostProcess()
         
 
 

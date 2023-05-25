@@ -21,8 +21,8 @@ class PlanningProblem:
         self.CurrentPeriod = 0
         self.StartBalance = 0
         self.LoanRate = 0
-        self.InboundContracts = []
-        self.OutboundContracts = []
+        self.InboundPayments = []
+        self.OutboundPayments = []
         self.solution = None
 
 
@@ -48,14 +48,14 @@ class PlanningSolution:
             if a.action.name == 'direct_pay_action':
                 #Find Contract id
                 contract_id = int(str(a.actual_parameters[1]).split('_')[-1])
-                ctr = pp.OutboundContracts[contract_id]
-                self.AddAction(ctr.id, period_id)
+                ctr = pp.OutboundPayments[contract_id]
+                self.AddAction(ctr.contract_id, period_id)
                 self.objective -= ctr.amount * (1 + (period_id - ctr.period) * ctr.rate) 
             elif a.action.name == 'direct_recv_action':
                 #Find Contract id
                 contract_id = int(str(a.actual_parameters[1]).split('_')[-1])
-                ctr = pp.InboundContracts[contract_id]
-                self.AddAction(ctr.id, period_id)
+                ctr = pp.InboundPayments[contract_id]
+                self.AddAction(ctr.contract_id, period_id)
                 self.objective += ctr.amount * (1 + (period_id - ctr.period) * ctr.rate)
             elif a.action.name == 'advance_period':
                 period_id += 1
@@ -120,8 +120,8 @@ class Planner:
         for i in range(pp.CurrentPeriod, pp.NumberOfPeriods):
             problem.set_initial_value(connected_periods(periods[i], periods[i + 1]), True)
         
-        for i in range(len(pp.InboundContracts)):
-            c = pp.InboundContracts[i]
+        for i in range(len(pp.InboundPayments)):
+            c = pp.InboundPayments[i]
             start_p = c.period
             max_p = c.max_forward_deferral
             min_p = c.max_backward_deferral
@@ -142,8 +142,8 @@ class Planner:
                 print("ERROR NO DATA SET FOR CONTRACT IN PLANNING MODEL")
                 assert(data_set)
          
-        for i in range(len(pp.OutboundContracts)):
-            c = pp.OutboundContracts[i]
+        for i in range(len(pp.OutboundPayments)):
+            c = pp.OutboundPayments[i]
             start_p = c.period
             max_p = c.max_forward_deferral
             min_p = c.max_backward_deferral

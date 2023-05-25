@@ -13,18 +13,19 @@ p = CAOSProblem()
 p.LoadInstance(instance)
 p.Report()
 
-p.UpdateContract(p.contracts[2], 0, 4.0, 3)
+#p.UpdateContract(p.contracts[2], 0, 4.0, 3)
 #p.UpdateContract(p.contracts[11], 0, 1.0, 1)
 #p.UpdateContract(p.contracts[19], 0, 1.0, 1)
 #p.UpdateContract(p.contracts[20], 0, 1.0, 1)
 #p.UpdateContract(p.contracts[26], 0, 1.0, 1)
 
-p.Report()
+#p.Report()
 
-#Solve Problem
-p.Solve()
+#Get Actions
+report = p.GenerateActions()
 
-p.PostProcess()
+
+action = p.CreatePaymentAction(p.contracts[2], 0, 4.0, 3)
 
 
 

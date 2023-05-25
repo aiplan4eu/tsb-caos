@@ -31,8 +31,8 @@ class InterestRatePrediction:
 
 
     @staticmethod   
-    def GetInterestRateForClient(c, rates, min_sample, max_sample):
-        sample_num = min(max(random.random(), min_sample), max_sample)
+    def GetInterestRateForClient(c, rates, min_sample_val, max_sample_val):
+        sample = min(max(random.random(), min_sample_val), max_sample_val)
         
         t_sum = sum([InterestRatePrediction.FindRateProbability(c, r) for r in rates])
         t_sum_inv = 1.0 / t_sum
@@ -41,7 +41,7 @@ class InterestRatePrediction:
         for r in rates:
             r_prob = InterestRatePrediction.FindRateProbability(c, r)
             t_val += r_prob * t_sum_inv
-            if (sample_num > t_val):
+            if (sample > t_val):
                 continue
             else:
                 return (0.01 * r, r_prob) #Normalize rate from 0-100 to 0-1
@@ -61,7 +61,7 @@ class InterestRatePrediction:
             if (sample_num > t_val):
                 continue
             else:
-                return (p, r_prob) #Normalize rate from 0-100 to 0-1
+                return (p, r_prob)
         
         return (0, 1.0)
 
