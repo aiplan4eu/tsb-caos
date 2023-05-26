@@ -1,11 +1,12 @@
 from scenario_generator import ScenarioGenerator
-from plan_evaluator import PlanEvaluator
+from plan_evaluator import PlanEvaluator, ContractEvaluation
 from planner import Planner
 from common import Contract, Payment, Client, ContractStatus, ContractType
 from matplotlib import pyplot as plt
 import json
 from multiprocessing.pool import ThreadPool
-from utilities import log, random
+from utilities import log, MessageType, random
+from math import sqrt
 import time
 
 
@@ -28,7 +29,7 @@ class CAOSProblem:
         self.scenarios = []
         
 
-    def CreateRandomInstance(self):
+    def CreateRandomInstance(self, export_instance=False):
         self.StartBalance = 0
         self.LoanRate = 1.0 + 2 * random.random()
         self.ScenariosPerRate = 20
@@ -40,11 +41,26 @@ class CAOSProblem:
         #Add Clients
         client_num = random.randint(10, 20)
         for c in range(client_num):
-            self.AddCounterParty("Client" + str(c), 
-                                 0.5 + 3.0 * random.random(),
-                                 1.5 + 4.5 * random.random(),
-                                 max(1.0, min(0.5, 0.5 + random.random())),
-                                 max(1.0, min(0.25, 0.25 + random.random())))
+
+            #calculate means for sigmoid functions
+            #inbound rate parameters
+            b1 = random.uniform(1.0,  4)
+            a1 = random.uniform(3.91 / b1, 30)
+            
+            #outbound rate parameters
+            b2 = random.uniform(-6 , -1 )
+            a2 = random.uniform(-30, 3.91 / b2)
+
+            d_o = random.randint(0, 5)
+            d_i = random.uniform(0.1, (d_o + 1) / 4)
+
+            cl = Client("Client" + str(c), 
+                        a1, b1, a2, b2, #Interest rate parameters
+                        min(1.0, 0.2 + random.random()), #Negotiation Pref
+                        d_o, #Deferral Openness in periods
+                        d_i) #Incline of deferral period curve 
+                        
+            self.AddCounterParty(cl)
         
         self.NumberOfClients = len(self.clients) # Calculate the correct number of clients
         total_contracts = random.randint(20, 50)
@@ -54,11 +70,18 @@ class CAOSProblem:
                 contract_type = ContractType.INBOUND
             else:
                 contract_type = ContractType.OUTBOUND
-
+            
             contract_amount = 1000 * random.randint(1, 6)
             client = self.clients[random.randint(0, len(self.clients) - 1)]
             
-            self.AddContract(client, random.randint(0, max_periods), contract_amount, contract_type)
+            #Create contract
+            ctr = Contract(contract_type, client)
+            pmnt = Payment(ctr, random.randint(0, max_periods), contract_amount)
+            ctr.AddPayment(pmnt)
+            self.AddContract(ctr)
+
+        if (export_instance):
+            self.ExportInstance()
         
     def ExportInstance(self):
         #Save Instance to file
@@ -71,27 +94,40 @@ class CAOSProblem:
         
         data["Clients"] = {}
         for c in self.clients:
-            data["Clients"][c.name] = {"a": c.alpha, 
-                                       "b": c.beta, 
-                                       "negotiation_preference": c.negotiation_preference,
-                                       "deferral_openess": c.deferral_openess}
-        
-
+            data["Clients"][c.name] = {"rate_in_alpha": c.rate_in_a, 
+                                       "rate_in_beta": c.rate_in_b, 
+                                       "rate_out_alpha": c.rate_out_a, 
+                                       "rate_out_beta": c.rate_out_b, 
+                                       "negotiation_openness": c.negotiation_openness,
+                                       "deferral_openness": c.deferral_openness,
+                                       "deferral_incline": c.deferral_incline}
+            
         data["Contracts"] = {}
         data["Contracts"]["Inbound"] = []
         data["Contracts"]["Outbound"] = []
         for c in self.contracts:
+            c_dict = {'client': c.client.name, 'amount': c.amount, 'payments' : []}
+            
+            for p in c.installments:
+                c_dict['payments'].append({'period': p.period, 'amount': p.amount})
+
             if (c.type == ContractType.INBOUND):
-                data["Contracts"]["Inbound"].append({"client": c.client.name, "period": c.period, "amount": c.amount})
+                data["Contracts"]["Inbound"].append(c_dict)
             elif (c.type == ContractType.OUTBOUND):
-                data["Contracts"]["Outbound"].append({"client": c.client.name, "period": c.period, "amount": c.amount})
-        
+                data["Contracts"]["Outbound"].append(c_dict)
+                
         f = open("gen_data.json", "w")
         f.write(json.dumps(data))
         f.close()
     
 
-    def LoadInstance(self, instance):
+    def LoadInstance(self, instance_name):
+        f = open(instance_name)
+        data = json.loads(f.read())
+        f.close()
+        self.LoadJsonData(data)
+
+    def LoadJsonData(self, instance):
         self.StartBalance = instance["StartBalance"]
         self.LoanRate = instance["LoanRate"]
         self.ScenariosPerRate = instance["ScenariosPerRate"]
@@ -101,8 +137,14 @@ class CAOSProblem:
         #Add Clients
         for c in instance["Clients"]:
             c_data = instance["Clients"][c]
-            self.AddCounterParty(c, c_data["a"], c_data["b"], 
-                                 c_data["negotiation_preference"], c_data["deferral_openess"])
+            cl = Client(c, 
+                        c_data["rate_in_alpha"], c_data["rate_in_beta"],
+                        c_data["rate_out_alpha"], c_data["rate_out_beta"],
+                        c_data["negotiation_openness"],
+                        c_data["deferral_openness"],
+                        c_data["deferral_incline"])
+            self.AddCounterParty(cl)
+        
         self.NumberOfClients = len(self.clients) # Calculate the correct number of clients
 
         #Add Inbound Contracts
@@ -111,9 +153,11 @@ class CAOSProblem:
             # NOTE: periods are zero indexed
             
             ctr = Contract(ContractType.INBOUND, client)
-            #By default add a single payment for now
-            pmnt =  Payment(ctr, c["period"], c["amount"])
-            ctr.AddPayment(pmnt)
+            for p in c["payments"]:
+                #By default add a single payment for now
+                pmnt =  Payment(ctr, p["period"], p["amount"])
+                ctr.AddPayment(pmnt)
+            
             self.AddContract(ctr)
         
         #Add Outbound Contracts
@@ -122,9 +166,11 @@ class CAOSProblem:
             # NOTE: periods are zero indexed
 
             ctr = Contract(ContractType.OUTBOUND, client)
-            #By default add a single payment for now
-            pmnt = Payment(ctr, c["period"], c["amount"])
-            ctr.AddPayment(pmnt)
+            for p in c["payments"]:
+                #By default add a single payment for now
+                pmnt =  Payment(ctr, p["period"], p["amount"])
+                ctr.AddPayment(pmnt)
+            
             self.AddContract(ctr)
 
 
@@ -155,16 +201,21 @@ class CAOSProblem:
         
         print("#######################")
 
-    def AddCounterParty(self, name, a, b, c, d):
-        if (name in self.clients):
-            log(f'Client {name} exists', "WARNING")
+    def AddCounterParty(self, client):
+        if (client.name in self.clients):
+            log(f'Client {client.name} exists', MessageType.WARNING)
             return
+        
+        #Set correct Id and save client
+        client.id = len(self.clients)
+        self.clients.append(client) # Client List
+        self.clientMap[client.name] = client # Client Dictionary using their name as the key
 
-        #Create CounterParty
-        c = Client(name, a, b, c, d)
-        c.id = len(self.clients)
-        self.clients.append(c) # Client List
-        self.clientMap[name] = c # Client Dictionary using their name as the key
+    def GetCounterPartyByName(self, name):
+        if (name not in self.clientMap):
+            log(f'No client exises with name: {name}', MessageType.WARNING)
+            return None
+        return self.clientMap[name]
 
     def AddContract(self, ctr):
         ctr.id = CAOSProblem.CONTRACT_COUNTER
@@ -174,33 +225,48 @@ class CAOSProblem:
         self.UpdatePlanningHorizon()
         return ctr
 
+    def GetContractById(self, id):
+        if (id not in self.contractMap):
+            log(f'No contract exises with id: {id}', MessageType.WARNING)
+            return None
+        return self.contractMap[id]
+
     def UpdatePlanningHorizon(self):
         self.PlanningHorizonEnd = 0
         for ctr in self.contracts:
             ctr.UpdatePlanningHorizon() #Update individual contract planning horizons
             self.PlanningHorizonEnd = max(self.PlanningHorizonEnd, ctr.PlanningHorizonEnd)
-                
+        
+
+    def ApplyAction(self, action):
+        ctr = self.GetContractById(action["contract_id"])
+        deferral = action["options"].deferral_periods
+        installments = action["options"].installments
+        rate = action["options"].rate
+
+        self.UpdateContract(ctr, deferral, rate, installments)
+
     
     def UpdateContract(self, contract, f_deferral, f_rate, f_installments):
         #Checks
         if not isinstance(contract, Contract):
-            print("Cannot finalize non contract object", "ERROR")
-            log("Non contract object provided", "ERROR")
+            print("Cannot finalize non contract object", MessageType.ERROR)
+            log("Non contract object provided", MessageType.ERROR)
             return
 
         if (contract not in self.contracts):
             print("Unable to finalize contract. Check log")
-            log("Contract object does not belong to problem", "ERROR")
+            log("Contract object does not belong to problem", MessageType.ERROR)
             return
 
-        if (contract.period != self.CurrentPeriod):
+        if (contract.PlanningHorizonStart != self.CurrentPeriod):
             print("Unable to finalize contract. Check log")
-            log("Finalizing a future contract is not yet supported", "WARNING")
+            log("Finalizing a future contract is not yet supported", MessageType.WARNING)
             return
 
         if (contract.status == ContractStatus.COMPLETED):
             print("Contract already finalized. Check log")
-            log("Processing of completed contracts is not yet supported", "WARNING")
+            log("Processing of completed contracts is not yet supported", MessageType.WARNING)
             return
 
         #Finalize contract
@@ -209,46 +275,32 @@ class CAOSProblem:
             #We just have to update the balance appropriately and finalize the contract
             
             #Calculate final amount
-            updated_amount = (1.0 + 0.01 * f_rate * (f_deferral - contract.period)) * contract.amount
+            updated_amount = (1.0 + 0.01 * f_rate * (f_deferral - contract.PlanningHorizonStart)) * contract.amount
 
-            if (f_deferral == self.CurrentPeriod):
-                
-                #Update balance with the new amount
-                if (contract.type == ContractType.INBOUND):
-                    self.Balance += updated_amount
-                elif (contract.type == ContractType.OUTBOUND):
-                    self.Balance -= updated_amount
-                
-                #Update contract parameters
-                contract.status = ContractStatus.COMPLETED
-                contract.amount = updated_amount
-                contract.rate = f_rate
-                print(f"Contract {contract.id} Completed!")
-            else:
-                #Just apply new settings to the contract
-                contract.period = f_deferral
-                contract.amount = updated_amount
-                contract.rate = 1.0
+            #Set contract as negotiated
+            contract.status = ContractStatus.NEGOTIATED
+            contract.ClearPayments()
+
+            #Add new payment
+            pmnt = Payment(contract, f_deferral, updated_amount, f_deferral, f_deferral)
+            contract.AddPayment(pmnt)
+            contract.UpdatePlanningHorizon()
+
         else:
             updated_amount = (1.0 + 0.01 * f_rate) * contract.amount
             installment_amount = updated_amount / f_installments
+            
+            contract.ClearPayments()
 
-            # Update main contract
-            contract.amount = installment_amount
-            contract.rate = 1.0
-            contract.max_backward_deferral = contract.period
-            contract.max_forward_deferral = contract.period
-            self.UpdateContract(contract, contract.period, 1.0, 1)
+            for i in range(f_installments):
+                pmnt = Payment(contract, contract.PlanningHorizonStart + i, installment_amount,
+                                contract.PlanningHorizonStart + i, contract.PlanningHorizonStart + i)
+                contract.AddPayment(pmnt)
+            
+            contract.UpdatePlanningHorizon()
+            contract.status = ContractStatus.NEGOTIATED
 
-            # Add remaining installments
-            for i in range(f_installments - 1):
-                new_ctr = self.AddContract(contract.client, contract.period + i + 1, installment_amount, contract.type)
-                new_ctr.max_backward_deferral = contract.period + i + 1
-                new_ctr.max_forward_deferral = contract.period + i + 1
-                new_ctr.status = ContractStatus.NEGOTIATED
-        
-
-
+        print(f"Contract {contract.id} Successfully Updated!")
 
     def AdvancePeriod(self):
         for c in self.contracts:
@@ -259,7 +311,7 @@ class CAOSProblem:
 
     def GenerateScenarios(self):
         self.scenarios, scn_count = ScenarioGenerator.GenerateScenarios(self)
-        log(f'Generated {scn_count} scenarios', "INFO")
+        log(f'Generated {scn_count} scenarios', MessageType.WARNING)
     
     def SolveScenarios(self):
         #At first add all scenarios to a list
@@ -281,12 +333,12 @@ class CAOSProblem:
         #Create thread pool
         processes_num = 1
         st = time.time()
-        log(f'Solving {len(scenario_list)} scenarios using {processes_num} threads', "INFO")
+        log(f'Solving {len(scenario_list)} scenarios using {processes_num} threads', MessageType.INFO)
         pool = ThreadPool(processes=processes_num)
         pool.map(self.SolveScenario, scenario_list)
         pool.close()
         pool.join()
-        log(f'Solving Completed in {time.time() - st} seconds', "INFO")
+        log(f'Solving Completed in {time.time() - st} seconds', MessageType.INFO)
     
     def SolveScenario(self, s):
         #Create Planning Problem from scenario
@@ -294,51 +346,75 @@ class CAOSProblem:
         #Save the planning problem solution in the scenario
         try:
             s.solution = Planner.Solve(p)
+            #print("Calculating Probability")
+            ScenarioGenerator.CalculateScenarioProbability(s) #Recalculate probabilities
+            #print("Decision Prob", s.decision_probability, "Total Prob", s.probability)
         except Exception as ex:
-            log(f"Problem when solving Scenario {s.index}", "ERROR")
-            log(ex, "ERROR")
+            log(f"Problem when solving Scenario {s.index}", MessageType.ERROR)
+            log(ex, MessageType.ERROR)
         finally:
             #print("Done")
             pass
             
     
-    def PostProcess(self):
-        response = {}
+    def SelectAction(self):
         
         for contract_id in self.scenarios:
-            response[contract_id] = {'scenario_results': []}
+            action = {'contract_id': contract_id,
+                      'options': None}
+            
             res = PlanEvaluator.EvaluateContract(contract_id, self)
-            response[contract_id]['scenario_results'] = [r.toDict() for r in res]
-            
-            #Post Process results and find scenario with the best score for every policy
-            p1_ctr = PlanEvaluator.GetPlanWithMaxPolicy(res, 1)
-            p2_ctr = PlanEvaluator.GetPlanWithMaxPolicy(res, 2)
-            p3_ctr = PlanEvaluator.GetPlanWithMaxPolicy(res, 3)
-            
-            #Store results to the response
-            response[contract_id]['Policy 1'] = p1_ctr.toDict()
-            response[contract_id]['Policy 2'] = p2_ctr.toDict()
-            response[contract_id]['Policy 3'] = p3_ctr.toDict()
-            
-            print("################")
-            print("### Best Options for contract", contract_id)
-            print("### Policy 1")
-            print(p1_ctr.toDict())
-            print("### Policy 2")
-            print(p2_ctr.toDict())
-            print("### Policy 3")
-            print(p3_ctr.toDict())
-            print("################")
-            
-            #TODO: Create Plots     
-            #self.CreatePlot(res["Policy 1"]["Values"].keys(), res["Policy 1"]["Values"].values(), str(ctr.id) + "_pol1", "Policy 1")
-            #self.CreatePlot(res["Policy 2"]["Values"].keys(), res["Policy 2"]["Values"].values(), str(ctr.id) + "_pol2", "Policy 2")
-            #self.CreatePlot(res["Policy 3"]["Values"].keys(), res["Policy 3"]["Values"].values(), str(ctr.id) + "_pol3", "Policy 3")
+            results = [r.toDict() for r in res]
 
-        f = open("report.json", "w")
-        f.write(json.dumps(response))
-        f.close()
-        print("### Results saved to report.json")
+            #Cache results 
+            f = open("report.json", "w")
+            f.write(json.dumps(results))
+            f.close()
+            print("### Analysis logged saved to report.json")
+
+            #Start Interactive Dialog
+            selected_policy = int(input("Please select a desired policy for the client (1: Weighted, 2: Greedy, 3: Optimistic): "))
+
+            #Sort plans based on the selected policy
+            
+            if (selected_policy == 1):
+                plan_list = sorted(res, key=lambda x: x.weighted_objective, reverse=True)
+            elif (selected_policy == 2):
+                plan_list = sorted(res, key=lambda x: x.objective, reverse=True)
+            elif (selected_policy == 3):
+                plan_list = sorted(res, key=lambda x: x.probability, reverse=True)
+
+            while(len(plan_list) > 0) :
+                negotiation = plan_list.pop(0)
+                
+                print("Negotation Suggestion: ")
+                print("Deferral: ", negotiation.deferral_periods, "periods")
+                print("Installments: ", negotiation.installments)
+                print("Rate: ", negotiation.rate, "%")
+                print("Avg. Decision Prob.", negotiation.decision_probability)
+                print("Avg. Scenario Prob.", negotiation.probability)
+                print("Avg. Objective.", negotiation.objective)
+                print("Avg. Weighted Objective.", negotiation.weighted_objective)
+                print("Total Score: ", negotiation.rate, "%")
+                
+                accepted = input("Did the negotiation succeed? (Y/N). Enter Q to cancel negotation mode: ")
+
+                if (accepted == "Y"):
+                    action["options"] = negotiation
+                    return action
+                elif (accepted == "Q"):
+                    print("Negotiations Terminated")
+                    break
+            
+            #Add default options
+            action["options"] = ContractEvaluation()
+            action["options"].installments = 1
+            action["options"].rate = 0.0
+            action["options"].deferral_periods = 0
+            
+            return action
+
+        
     
     def CreatePlot(self, keys, values, figname, policy):
         #Create bar plot for client
@@ -350,15 +426,14 @@ class CAOSProblem:
         f.savefig(figname, dpi=600)
 
 
-    def GenerateActions(self):
+    def AnalyzeState(self):
         #Generate Scenarios
         self.GenerateScenarios()
         #Solve Them
         self.SolveScenarios()
-        #Post Process
-        return self.PostProcess()
+        #Get Action
+        return self.SelectAction()
         
-
 
 
 if (__name__ == "__main__"):

@@ -49,14 +49,14 @@ class PlanningSolution:
                 #Find Contract id
                 contract_id = int(str(a.actual_parameters[1]).split('_')[-1])
                 ctr = pp.OutboundPayments[contract_id]
-                self.AddAction(ctr.contract_id, period_id)
-                self.objective -= ctr.amount * (1 + (period_id - ctr.period) * ctr.rate) 
+                self.AddAction({'ContractId: ' : ctr.contract_id, 'Rate' : ctr.rate, 'Amount': ctr.amount, 'Type' : ctr.type, 'Client' : ctr.client.name, 'StartPeriod': ctr.period}, period_id)
+                self.objective -= ctr.amount * (1.0 + (period_id - ctr.period) * ctr.rate) 
             elif a.action.name == 'direct_recv_action':
                 #Find Contract id
                 contract_id = int(str(a.actual_parameters[1]).split('_')[-1])
                 ctr = pp.InboundPayments[contract_id]
-                self.AddAction(ctr.contract_id, period_id)
-                self.objective += ctr.amount * (1 + (period_id - ctr.period) * ctr.rate)
+                self.AddAction({'ContractId: ' : ctr.contract_id, 'Rate' : ctr.rate, 'Amount': ctr.amount, 'Type' : ctr.type, 'Client' : ctr.client.name, 'StartPeriod': ctr.period}, period_id)
+                self.objective += ctr.amount * (1.0 + (period_id - ctr.period) * ctr.rate)
             elif a.action.name == 'advance_period':
                 period_id += 1
                 if (self.objective < 0):

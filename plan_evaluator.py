@@ -1,5 +1,6 @@
 import json
 from utilities import log
+from common import MessageType
 
 
 class ContractEvaluation:
@@ -10,6 +11,7 @@ class ContractEvaluation:
         self.objective = 0.0
         self.installments = 0
         self.probability = 0.0
+        self.decision_probability = 0.0
 
     def toDict(self):
         return {
@@ -18,7 +20,8 @@ class ContractEvaluation:
                     'Weighted Objective': self.weighted_objective,
                     'Objective': self.objective,
                     'Installments': self.installments,
-                    'Probability': self.probability
+                    'Probability': self.probability,
+                    'Decision Probability': self.decision_probability
                 }
     
 class PlanEvaluator:
@@ -38,16 +41,19 @@ class PlanEvaluator:
         p1_val = 0
         p2_val = 0
         p3_val = 0
+        p4_val = 0
         
-        #Accumulate policy metrics for all the scenarios of all 
+        #Accumulate policy metrics for all the scenarios of the same contract
         for scn in scn_list:
             p1_val += scn.GetWeightedObjective()
             p2_val += scn.probability
             p3_val += scn.GetObjective()
+            p4_val += scn.decision_probability
         
         p1_val /= float(problem.ScenariosPerRate)
         p2_val /= float(problem.ScenariosPerRate)
         p3_val /= float(problem.ScenariosPerRate)
+        p4_val /= float(problem.ScenariosPerRate)
         
         evaluation = ContractEvaluation()
         evaluation.deferral_periods = def_periods
@@ -55,6 +61,7 @@ class PlanEvaluator:
         evaluation.rate = rate
         evaluation.weighted_objective = p1_val
         evaluation.probability = p2_val
+        evaluation.decision_probability = p4_val
         evaluation.objective = p3_val
 
         return evaluation
@@ -81,36 +88,6 @@ class PlanEvaluator:
                     ctr_evaluations.append(evaluation)
         
         return ctr_evaluations
-    
-
-    @staticmethod
-    def GetPlanWithMaxPolicy(plan_list, policy_id):
-        best_plan = None
-        
-        if (policy_id == 1): #Weighted Objective
-            best_score = -10000000
-            for p in plan_list:
-                if (p.weighted_objective > best_score):
-                    best_plan = p
-                    best_score = p.weighted_objective
-        
-        elif (policy_id == 2):
-            best_score = -10000000
-            for p in plan_list:
-                if (p.objective > best_score):
-                    best_plan = p
-                    best_score = p.objective
-        
-        elif (policy_id == 3):
-            best_score = -10000000
-            for p in plan_list:
-                if (p.probability > best_score):
-                    best_plan = p
-                    best_score = p.probability
-        else:
-            log("Incorrect Policy ID", "WARNING")
-        
-        return best_plan
     
     
 

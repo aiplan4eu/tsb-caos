@@ -1,45 +1,124 @@
 import random
 from math import exp
+from common import ContractType
+from utilities import log, MessageType
+
 
 
 class InterestRatePrediction:
     def __init__(self):
         pass
 
+
     @staticmethod
-    def FindDeferralProbability(client, p):
-        #Linear Function that controls the preference of clients for deferral days
-        prob = (client.deferral_openess - 1.0) * p + 1
+    def FindDeferralProbability(client, ctr_type, p, start_p):
+        if (ctr_type == ContractType.INBOUND):
+            return InterestRatePrediction.FindDeferralProbabilityInbound(client, p - start_p)
+        elif (ctr_type == ContractType.OUTBOUND):
+            return InterestRatePrediction.FindDeferralProbabilityOutbound(client, p - start_p)
+        else:
+            log(f"Unknown contract type {ctr_type}", MessageType.ERROR)
+    
+    @staticmethod
+    def FindDeferralProbabilityInbound(client, p):
+        #p is the difference in periods from the original date
+        
+        #Assymptotic Function that describtes the acceptance probability of a client for a specific deferral
+        #TODO: In the future this can be improved to take the payment details into account
+        
+        if (p < -client.deferral_openness):
+            prob = 0.0
+        elif (p > 0):
+            prob = 1.0
+        elif (client.negotiation_openness > 0.65):
+            prob = -client.deferral_incline / (p - client.def_in_p2) + client.def_in_b2
+        else:
+            prob = -client.deferral_incline / (p - client.def_in_p1) + client.def_in_b1
+
+        return min(max(prob, 0.0), 1.0)
+    
+    
+    @staticmethod
+    def FindDeferralProbabilityOutbound(client, p):
+        #p is the difference in periods from the original date
+        
+        #Assymptotic Function that describtes the acceptance probability of a client for a specific deferral
+        #TODO: In the future this can be improved to take the payment details into account
+        
+        if (p > client.deferral_openness):
+            prob = 0.0
+        elif (p < 0):
+            prob = 1.0
+        elif (client.negotiation_openness > 0.65):
+            prob = client.deferral_incline / (p - client.def_out_p2) + client.def_out_b2
+        else:
+            prob = client.deferral_incline / (p - client.def_out_p1) + client.def_out_b1
+
         return min(max(prob, 0.0), 1.0)
 
 
     @staticmethod
-    def FindRateProbability(client, rate):
-        #TODO: Needs calibration for the range of rates
-        
-        #Normal distribution
-        #client alpha is the standard deviation > 0.4
-        #client beta is the mean value of accepted rates
-        #prob = (1.0 / (client.alpha * sqrt(2.0 * pi))) * exp(-pow(rate - client.beta, 2)/(2 * client.alpha * client.alpha))
-        
+    def FindRateProbability(client, ctr_type, rate):
+        if (ctr_type == ContractType.INBOUND):
+            return InterestRatePrediction.FindRateProbabilityInbound(client, rate)
+        elif (ctr_type == ContractType.OUTBOUND):
+            return InterestRatePrediction.FindRateProbabilityOutbound(client, -rate)
+        else:
+            log(f"Unknown contract type {ctr_type}", MessageType.ERROR)
+
+
+    @staticmethod
+    def FindRateProbabilityOutbound(client, rate):
         #Logistic Function
-        #client alpha is the growth rate [1 , 50]
-        #client beta is the mean value [1 , 10]
-        prob = 1.0 - (1.0 / (1.0 + exp(-client.alpha * (rate - client.beta))))
+        #client alpha is the growth rate [-30, 3.91/b]
+        #client beta is the mean value [-6 , -1]
+        
+        if (rate > 0):
+            prob = 1.0
+        else:
+            prob = 1.0 / (1.0 + exp(client.rate_out_a * (rate - client.rate_out_b)))
+        
+        #Clamp the result
+        return min(max(prob, 0.0), 1.0)
+
+
+    @staticmethod
+    def FindRateProbabilityInbound(client, rate):
+        #Logistic Function
+        #client alpha is the growth rate [3.91/b , 30]
+        #client beta is the mean value [1 , 4]
+        
+        if (rate < 0):
+            prob = 1.0
+        else:
+            prob = 1.0 / (1.0 + exp(client.rate_in_a * (rate - client.rate_in_b)))
+        
         #Clamp the result
         return min(max(prob, 0.0), 1.0)
 
 
     @staticmethod   
-    def GetInterestRateForClient(c, rates, min_sample_val, max_sample_val):
+    def GetInterestRateForClient(c, ctr_type, rates, min_sample_val, max_sample_val):
+        sample = random.random()
+        
         sample = min(max(random.random(), min_sample_val), max_sample_val)
         
-        t_sum = sum([InterestRatePrediction.FindRateProbability(c, r) for r in rates])
+        #Filter rates to satisfy probability requirements
+        eff_rates = []
+        for r in rates:
+            if (InterestRatePrediction.FindRateProbability(c, ctr_type, r) > min_sample_val):
+                eff_rates.append(r)
+
+        if len(eff_rates) == 0:
+            log(f"Could not find any rate for client {c.name}. Recheck thresholds", MessageType.ERROR)
+            assert(False)
+        
+        t_sum = sum([InterestRatePrediction.FindRateProbability(c, ctr_type, r) for r in eff_rates])
         t_sum_inv = 1.0 / t_sum
         t_val = 0.0
 
-        for r in rates:
-            r_prob = InterestRatePrediction.FindRateProbability(c, r)
+        for r in eff_rates:
+            r_prob = InterestRatePrediction.FindRateProbability(c, ctr_type, r)
             t_val += r_prob * t_sum_inv
             if (sample > t_val):
                 continue
@@ -67,5 +146,5 @@ class InterestRatePrediction:
 
     @staticmethod
     def IsClientNegotiating(c):
-        val = random.random() < c.negotiation_preference
+        val = random.random() < c.negotiation_openness
         return val

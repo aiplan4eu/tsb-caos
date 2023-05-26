@@ -2,15 +2,17 @@ from problem import CAOSProblem
 #from scenario_generator import *
 import json
 
-#Load Instance
-f = open("gen_data.json")
-instance = json.loads(f.read())
-f.close()
 
+#Generate new problem instance
 p = CAOSProblem()
 
+#Create New Instance
+#p.CreateRandomInstance(True)
+
 #Load Instance
-p.LoadInstance(instance)
+p.LoadInstance("gen_data.json")
+
+#Report Instance
 p.Report()
 
 #p.UpdateContract(p.contracts[2], 0, 4.0, 3)
@@ -19,20 +21,21 @@ p.Report()
 #p.UpdateContract(p.contracts[20], 0, 1.0, 1)
 #p.UpdateContract(p.contracts[26], 0, 1.0, 1)
 
-#p.Report()
+p.Report()
 
 #Get Actions
-report = p.GenerateActions()
+action = p.AnalyzeState()
 
+#Apply Action
+p.ApplyAction(action)
+p.Report()
 
-action = p.CreatePaymentAction(p.contracts[2], 0, 4.0, 3)
+#Progress to next contract
+action = p.AnalyzeState()
 
-
-
-
-
-
-
+#Apply New action
+p.ApplyAction(action)
+p.Report()
 
 
 
