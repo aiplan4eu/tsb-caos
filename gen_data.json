@@ -1,5 +1,6 @@
 {
-    "StartBalance": 0,
+    "Balance": 0,
+    "CurrentPeriod": 0,
     "LoanRate": 2.8497305032518905,
     "Rates": [
         1.0,
@@ -21,268 +22,627 @@
         3,
         6
     ],
-    "ScenariosPerRate": 5,
+    "ScenariosPerRate": 4,
     "Clients": {
         "Client0": {
-            "a": 0.5512298030859355,
-            "b": 2.880347620001907,
-            "negotiation_preference": 0.8791850099719167,
-            "deferral_openess": 0.6080798441939275
+            "rate_in_alpha": 11.780850992097832,
+            "rate_in_beta": 1.0512298030859355,
+            "rate_out_alpha": -19.59875151185149,
+            "rate_out_beta": -4.104074950140417,
+            "negotiation_openness": 0.644573573873013,
+            "deferral_openness": 5,
+            "deferral_incline": 0.3687960205550097
         },
         "Client1": {
-            "a": 2.6778629763125736,
-            "b": 2.7032187283082383,
-            "negotiation_preference": 0.5140759663361248,
-            "deferral_openess": 0.8701605458187531
+            "rate_in_alpha": 14.932209789176317,
+            "rate_in_beta": 1.6631175194716574,
+            "rate_out_alpha": -27.483851484353828,
+            "rate_out_beta": -5.876165162552157,
+            "negotiation_openness": 0.2195795559334302,
+            "deferral_openness": 5,
+            "deferral_incline": 0.7975372268985785
         },
         "Client2": {
-            "a": 3.204973996239162,
-            "b": 1.9765489167420816,
-            "negotiation_preference": 1.0,
-            "deferral_openess": 0.7482408763561276
+            "rate_in_alpha": 13.71010814144564,
+            "rate_in_beta": 2.882997447271848,
+            "rate_out_alpha": -24.205825935719687,
+            "rate_out_beta": -2.1461285480277787,
+            "negotiation_openness": 0.8579127100998953,
+            "deferral_openness": 0,
+            "deferral_incline": 0.18836852241580074
         },
         "Client3": {
-            "a": 0.5587386678002906,
-            "b": 4.324496170907771,
-            "negotiation_preference": 0.931293773345622,
-            "deferral_openess": 1.0
+            "rate_in_alpha": 29.162024094120586,
+            "rate_in_beta": 2.862974365414201,
+            "rate_out_alpha": -7.916086082353289,
+            "rate_out_beta": -4.186037407609458,
+            "negotiation_openness": 0.4812739659885474,
+            "deferral_openness": 2,
+            "deferral_incline": 0.729565016715455
         },
         "Client4": {
-            "a": 1.1168802406587233,
-            "b": 1.658893545352337,
-            "negotiation_preference": 0.869105649425929,
-            "deferral_openess": 0.4219306157603223
+            "rate_in_alpha": 17.615072018729503,
+            "rate_in_beta": 3.9238764117894567,
+            "rate_out_alpha": -25.031170184691145,
+            "rate_out_beta": -1.928622243029385,
+            "negotiation_openness": 0.6474515592733343,
+            "deferral_openness": 3,
+            "deferral_incline": 0.6315487281407531
         },
         "Client5": {
-            "a": 1.1481358476892536,
-            "b": 4.808447566871093,
-            "negotiation_preference": 1.0,
-            "deferral_openess": 1.0
+            "rate_in_alpha": 6.553503000704389,
+            "rate_in_beta": 2.9271353966798963,
+            "rate_out_alpha": -20.545224588428667,
+            "rate_out_beta": -5.107300246745844,
+            "negotiation_openness": 0.3143012052947814,
+            "deferral_openness": 4,
+            "deferral_incline": 0.324949030724485
         },
         "Client6": {
-            "a": 3.4056846925328697,
-            "b": 2.765732846948463,
-            "negotiation_preference": 1.0,
-            "deferral_openess": 0.8229855901430257
+            "rate_in_alpha": 4.067929325734182,
+            "rate_in_beta": 1.2958125939848073,
+            "rate_out_alpha": -13.299905573491028,
+            "rate_out_beta": -4.622177692499238,
+            "negotiation_openness": 0.5696539320060992,
+            "deferral_openness": 4,
+            "deferral_incline": 0.48042557519229356
         },
         "Client7": {
-            "a": 2.942826654182369,
-            "b": 2.299342835177578,
-            "negotiation_preference": 0.9830841838613874,
-            "deferral_openess": 1.0
+            "rate_in_alpha": 10.600792493462908,
+            "rate_in_beta": 1.8654529722516884,
+            "rate_out_alpha": -14.54651954754565,
+            "rate_out_beta": -2.112087501036814,
+            "negotiation_openness": 0.8196522622094233,
+            "deferral_openness": 2,
+            "deferral_incline": 0.19719661749625722
         },
         "Client8": {
-            "a": 2.527172818237062,
-            "b": 2.2361317002708567,
-            "negotiation_preference": 1.0,
-            "deferral_openess": 0.7835866832987394
+            "rate_in_alpha": 24.442361627959045,
+            "rate_in_beta": 1.358181514750647,
+            "rate_out_alpha": -20.51522841248942,
+            "rate_out_beta": -3.5349288345118466,
+            "negotiation_openness": 0.7926957361426061,
+            "deferral_openness": 1,
+            "deferral_incline": 0.46749727054033885
         },
         "Client9": {
-            "a": 2.520106028375182,
-            "b": 3.840303915591801,
-            "negotiation_preference": 1.0,
-            "deferral_openess": 0.3323271356419041
+            "rate_in_alpha": 5.866508904815127,
+            "rate_in_beta": 3.8363993402503738,
+            "rate_out_alpha": -28.516763737176905,
+            "rate_out_beta": -1.1249676557712567,
+            "negotiation_openness": 0.3625696704504137,
+            "deferral_openness": 3,
+            "deferral_incline": 0.45404368431140874
         },
         "Client10": {
-            "a": 1.7784273409604987,
-            "b": 4.056045489311517,
-            "negotiation_preference": 1.0,
-            "deferral_openess": 0.5305809439768133
+            "rate_in_alpha": 2.684066709045607,
+            "rate_in_beta": 1.676899113220096,
+            "rate_out_alpha": -8.375877674009129,
+            "rate_out_beta": -4.888988353127102,
+            "negotiation_openness": 1.0,
+            "deferral_openness": 0,
+            "deferral_incline": 0.18078941845667273
         }
     },
     "Contracts": {
         "Inbound": [
             {
-                "client": "Client3",
-                "period": 5,
-                "amount": 4000
-            },
-            {
-                "client": "Client9",
-                "period": 1,
-                "amount": 6000
-            },
-            {
-                "client": "Client7",
-                "period": 0,
-                "amount": 2000
-            },
-            {
-                "client": "Client0",
-                "period": 8,
-                "amount": 6000
-            },
-            {
-                "client": "Client1",
-                "period": 5,
-                "amount": 4000
+                "client": "Client4",
+                "status": 0,
+                "amount": 4000,
+                "payments": [
+                    {
+                        "period": 3,
+                        "amount": 4000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client6",
-                "period": 1,
-                "amount": 5000
+                "status": 0,
+                "amount": 5000,
+                "payments": [
+                    {
+                        "period": 1,
+                        "amount": 5000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client3",
-                "period": 8,
-                "amount": 6000
+                "status": 0,
+                "amount": 6000,
+                "payments": [
+                    {
+                        "period": 8,
+                        "amount": 6000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client4",
-                "period": 1,
-                "amount": 1000
+                "status": 0,
+                "amount": 1000,
+                "payments": [
+                    {
+                        "period": 1,
+                        "amount": 1000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client3",
-                "period": 2,
-                "amount": 4000
+                "status": 0,
+                "amount": 4000,
+                "payments": [
+                    {
+                        "period": 2,
+                        "amount": 4000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client5",
-                "period": 8,
-                "amount": 1000
+                "status": 0,
+                "amount": 1000,
+                "payments": [
+                    {
+                        "period": 8,
+                        "amount": 1000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client3",
-                "period": 8,
-                "amount": 1000
+                "status": 0,
+                "amount": 1000,
+                "payments": [
+                    {
+                        "period": 8,
+                        "amount": 1000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client4",
-                "period": 0,
-                "amount": 4000
+                "status": 0,
+                "amount": 4000,
+                "payments": [
+                    {
+                        "period": 0,
+                        "amount": 4000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client6",
-                "period": 1,
-                "amount": 6000
+                "status": 0,
+                "amount": 6000,
+                "payments": [
+                    {
+                        "period": 1,
+                        "amount": 6000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client8",
-                "period": 2,
-                "amount": 5000
+                "status": 0,
+                "amount": 5000,
+                "payments": [
+                    {
+                        "period": 2,
+                        "amount": 5000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client4",
-                "period": 1,
-                "amount": 3000
+                "status": 0,
+                "amount": 3000,
+                "payments": [
+                    {
+                        "period": 1,
+                        "amount": 3000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client7",
-                "period": 9,
-                "amount": 6000
+                "status": 0,
+                "amount": 6000,
+                "payments": [
+                    {
+                        "period": 9,
+                        "amount": 6000,
+                        "status": 0
+                    }
+                ]
+            },
+            {
+                "client": "Client8",
+                "status": 0,
+                "amount": 2000,
+                "payments": [
+                    {
+                        "period": 5,
+                        "amount": 2000,
+                        "status": 0
+                    }
+                ]
+            },
+            {
+                "client": "Client0",
+                "status": 0,
+                "amount": 4000,
+                "payments": [
+                    {
+                        "period": 0,
+                        "amount": 4000,
+                        "status": 0
+                    }
+                ]
+            },
+            {
+                "client": "Client6",
+                "status": 0,
+                "amount": 1000,
+                "payments": [
+                    {
+                        "period": 1,
+                        "amount": 1000,
+                        "status": 0
+                    }
+                ]
+            },
+            {
+                "client": "Client2",
+                "status": 0,
+                "amount": 1000,
+                "payments": [
+                    {
+                        "period": 8,
+                        "amount": 1000,
+                        "status": 0
+                    }
+                ]
+            },
+            {
+                "client": "Client10",
+                "status": 0,
+                "amount": 5000,
+                "payments": [
+                    {
+                        "period": 9,
+                        "amount": 5000,
+                        "status": 0
+                    }
+                ]
+            },
+            {
+                "client": "Client0",
+                "status": 0,
+                "amount": 1000,
+                "payments": [
+                    {
+                        "period": 9,
+                        "amount": 1000,
+                        "status": 0
+                    }
+                ]
+            },
+            {
+                "client": "Client5",
+                "status": 0,
+                "amount": 1000,
+                "payments": [
+                    {
+                        "period": 1,
+                        "amount": 1000,
+                        "status": 0
+                    }
+                ]
             }
         ],
         "Outbound": [
             {
-                "client": "Client4",
-                "period": 8,
-                "amount": 3000
-            },
-            {
-                "client": "Client8",
-                "period": 3,
-                "amount": 4000
-            },
-            {
-                "client": "Client9",
-                "period": 1,
-                "amount": 1000
-            },
-            {
                 "client": "Client6",
-                "period": 0,
-                "amount": 4000
-            },
-            {
-                "client": "Client10",
-                "period": 0,
-                "amount": 2000
-            },
-            {
-                "client": "Client7",
-                "period": 3,
-                "amount": 4000
-            },
-            {
-                "client": "Client7",
-                "period": 8,
-                "amount": 3000
+                "status": 0,
+                "amount": 1000,
+                "payments": [
+                    {
+                        "period": 7,
+                        "amount": 1000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client4",
-                "period": 3,
-                "amount": 4000
+                "status": 0,
+                "amount": 1000,
+                "payments": [
+                    {
+                        "period": 7,
+                        "amount": 1000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client8",
-                "period": 10,
-                "amount": 5000
+                "status": 0,
+                "amount": 5000,
+                "payments": [
+                    {
+                        "period": 10,
+                        "amount": 5000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client8",
-                "period": 3,
-                "amount": 5000
+                "status": 0,
+                "amount": 5000,
+                "payments": [
+                    {
+                        "period": 3,
+                        "amount": 5000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client2",
-                "period": 0,
-                "amount": 4000
+                "status": 0,
+                "amount": 4000,
+                "payments": [
+                    {
+                        "period": 1,
+                        "amount": 4000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client10",
-                "period": 6,
-                "amount": 3000
+                "status": 0,
+                "amount": 3000,
+                "payments": [
+                    {
+                        "period": 6,
+                        "amount": 3000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client4",
-                "period": 8,
-                "amount": 4000
+                "status": 0,
+                "amount": 4000,
+                "payments": [
+                    {
+                        "period": 8,
+                        "amount": 4000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client5",
-                "period": 8,
-                "amount": 2000
+                "status": 0,
+                "amount": 2000,
+                "payments": [
+                    {
+                        "period": 8,
+                        "amount": 2000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client2",
-                "period": 6,
-                "amount": 1000
+                "status": 0,
+                "amount": 1000,
+                "payments": [
+                    {
+                        "period": 6,
+                        "amount": 1000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client0",
-                "period": 2,
-                "amount": 6000
+                "status": 0,
+                "amount": 6000,
+                "payments": [
+                    {
+                        "period": 2,
+                        "amount": 6000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client7",
-                "period": 9,
-                "amount": 3000
+                "status": 0,
+                "amount": 3000,
+                "payments": [
+                    {
+                        "period": 9,
+                        "amount": 3000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client7",
-                "period": 6,
-                "amount": 1000
+                "status": 0,
+                "amount": 1000,
+                "payments": [
+                    {
+                        "period": 6,
+                        "amount": 1000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client5",
-                "period": 6,
-                "amount": 6000
+                "status": 0,
+                "amount": 6000,
+                "payments": [
+                    {
+                        "period": 6,
+                        "amount": 6000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client4",
-                "period": 5,
-                "amount": 3000
+                "status": 0,
+                "amount": 3000,
+                "payments": [
+                    {
+                        "period": 5,
+                        "amount": 3000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client6",
-                "period": 10,
-                "amount": 1000
+                "status": 0,
+                "amount": 1000,
+                "payments": [
+                    {
+                        "period": 10,
+                        "amount": 1000,
+                        "status": 0
+                    }
+                ]
             },
             {
                 "client": "Client4",
-                "period": 8,
-                "amount": 5000
+                "status": 0,
+                "amount": 5000,
+                "payments": [
+                    {
+                        "period": 8,
+                        "amount": 5000,
+                        "status": 0
+                    }
+                ]
+            },
+            {
+                "client": "Client6",
+                "status": 0,
+                "amount": 1000,
+                "payments": [
+                    {
+                        "period": 3,
+                        "amount": 1000,
+                        "status": 0
+                    }
+                ]
+            },
+            {
+                "client": "Client1",
+                "status": 0,
+                "amount": 4000,
+                "payments": [
+                    {
+                        "period": 4,
+                        "amount": 4000,
+                        "status": 0
+                    }
+                ]
+            },
+            {
+                "client": "Client3",
+                "status": 0,
+                "amount": 1000,
+                "payments": [
+                    {
+                        "period": 9,
+                        "amount": 1000,
+                        "status": 0
+                    }
+                ]
+            },
+            {
+                "client": "Client9",
+                "status": 0,
+                "amount": 3000,
+                "payments": [
+                    {
+                        "period": 2,
+                        "amount": 3000,
+                        "status": 0
+                    }
+                ]
+            },
+            {
+                "client": "Client5",
+                "status": 0,
+                "amount": 6000,
+                "payments": [
+                    {
+                        "period": 4,
+                        "amount": 6000,
+                        "status": 0
+                    }
+                ]
+            },
+            {
+                "client": "Client2",
+                "status": 0,
+                "amount": 1000,
+                "payments": [
+                    {
+                        "period": 1,
+                        "amount": 1000,
+                        "status": 0
+                    }
+                ]
+            },
+            {
+                "client": "Client2",
+                "status": 0,
+                "amount": 6000,
+                "payments": [
+                    {
+                        "period": 4,
+                        "amount": 6000,
+                        "status": 0
+                    }
+                ]
+            },
+            {
+                "client": "Client4",
+                "status": 0,
+                "amount": 6000,
+                "payments": [
+                    {
+                        "period": 9,
+                        "amount": 6000,
+                        "status": 0
+                    }
+                ]
             }
         ]
     }

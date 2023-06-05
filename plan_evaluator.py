@@ -6,17 +6,25 @@ from common import MessageType
 class ContractEvaluation:
     def __init__(self):
         self.deferral_periods = -1
+        self.scenario_num = 0
         self.rate = 0.0
         self.weighted_objective = 0.0
         self.objective = 0.0
         self.installments = 0
         self.probability = 0.0
+        self.max_probability = 0.0
+        self.min_probability = 0.0
+        self.rate_probability = 0.0
+        self.max_rate_probability = 0.0
+        self.min_rate_probability = 0.0
+        self.def_date_probability = 0.0
         self.decision_probability = 0.0
 
     def toDict(self):
         return {
                     'Deferral Periods': self.deferral_periods,
                     'Rate': self.rate,
+                    'Scenarios' : self.scenario_num,
                     'Weighted Objective': self.weighted_objective,
                     'Objective': self.objective,
                     'Installments': self.installments,
@@ -40,27 +48,51 @@ class PlanEvaluator:
     def EvaluateAlternativeScenarios(problem, scn_list, rate, def_periods, inst_num):
         p1_val = 0
         p2_val = 0
+        p2_val_min = 1.0
+        p2_val_max = 0
         p3_val = 0
         p4_val = 0
+        p5_val = 0
+        p5_val_min = 1.0
+        p5_val_max = 0
+        p6_val = 0
+        
+        #Filter Scenarios
+        eff_scn_list = [s for s in scn_list if s.solution != None]
         
         #Accumulate policy metrics for all the scenarios of the same contract
-        for scn in scn_list:
+        for scn in eff_scn_list:
             p1_val += scn.GetWeightedObjective()
             p2_val += scn.probability
+            p2_val_min = min(p2_val_min, scn.probability)
+            p2_val_max = max(p2_val_max, scn.probability)
             p3_val += scn.GetObjective()
             p4_val += scn.decision_probability
+            p5_val += scn.rate_probability
+            p5_val_min = min(p5_val_min, scn.rate_probability)
+            p5_val_max = max(p5_val_max, scn.rate_probability)
+            p6_val += scn.def_date_probability
         
         p1_val /= float(problem.ScenariosPerRate)
         p2_val /= float(problem.ScenariosPerRate)
         p3_val /= float(problem.ScenariosPerRate)
         p4_val /= float(problem.ScenariosPerRate)
+        p5_val /= float(problem.ScenariosPerRate)
+        p6_val /= float(problem.ScenariosPerRate)
         
         evaluation = ContractEvaluation()
+        evaluation.scenario_num = len(eff_scn_list)
         evaluation.deferral_periods = def_periods
         evaluation.installments = inst_num
         evaluation.rate = rate
         evaluation.weighted_objective = p1_val
         evaluation.probability = p2_val
+        evaluation.max_probability = p2_val_max
+        evaluation.min_probability = p2_val_min
+        evaluation.rate_probability = p5_val
+        evaluation.max_rate_probability = p5_val_max
+        evaluation.min_rate_probability = p5_val_min
+        evaluation.def_date_probability = p6_val
         evaluation.decision_probability = p4_val
         evaluation.objective = p3_val
 

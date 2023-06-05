@@ -1,9 +1,12 @@
 import unified_planning
 from unified_planning.shortcuts import *
-#from unified_planning.engines import SequentialSimulator
+from interest_rate_prediction import InterestRatePrediction
 from unified_planning.model import Fluent
 from typing import cast
 from utilities import log
+
+
+LEAST_ACCEPTED_PROBABILITY = 0.8
 
 
 def convert_to_float(frac):
@@ -43,7 +46,7 @@ class PlanningSolution:
     def CreateFromPlan(self, pp, plan):
         self.objective = pp.StartBalance
         
-        period_id = 0
+        period_id = pp.CurrentPeriod
         for a in plan.actions:
             if a.action.name == 'direct_pay_action':
                 #Find Contract id
@@ -134,6 +137,11 @@ class Planner:
             data_set = False
 
             for p in range(pp.CurrentPeriod, pp.NumberOfPeriods):
+                def_prob = InterestRatePrediction.FindDeferralProbability(c.client, c.type, p, start_p)
+
+                if (def_prob < LEAST_ACCEPTED_PROBABILITY):
+                    continue
+                
                 if (p >= min_p and p <= max_p):
                     problem.set_initial_value(direct_inbound_data(periods[p], contract), (1.0 + rate * (p - start_p)) * amount)
                     data_set = True
@@ -142,6 +150,7 @@ class Planner:
                 print("ERROR NO DATA SET FOR CONTRACT IN PLANNING MODEL")
                 assert(data_set)
          
+        
         for i in range(len(pp.OutboundPayments)):
             c = pp.OutboundPayments[i]
             start_p = c.period
@@ -154,7 +163,12 @@ class Planner:
             problem.add_object(contract)
             
             data_set = False
-            for p in range(pp.NumberOfPeriods):
+            for p in range(pp.CurrentPeriod, pp.NumberOfPeriods):
+                def_prob = InterestRatePrediction.FindDeferralProbability(c.client, c.type, p, start_p)
+
+                if (def_prob < LEAST_ACCEPTED_PROBABILITY):
+                    continue
+                
                 if (p >= min_p and p <= max_p):
                     problem.set_initial_value(direct_outbound_data(periods[p], contract), (1.0 + rate * (p - start_p)) * amount)
                     data_set = True

@@ -1,6 +1,7 @@
-from enum import Enum
+from enum import Enum, IntEnum
 from utilities import log, MessageType
 from math import sqrt
+import json
 
 class Client:
     def __init__(self, name, a1, b1, a2, b2, neg_pref=0.5, def_open=4, def_incline=1.0):
@@ -53,10 +54,6 @@ class Client:
         self.def_in_b2 = 1 + (-def_incline / self.def_in_p2)
 
 
-
-
-
-
 class Payment:
     def __init__(self, c, p, a, mfd=0, mbd=0):
         self.contract = c
@@ -70,16 +67,16 @@ class Payment:
         self.status = PaymentStatus.COMPLETED
     
 
-class PaymentStatus(Enum):
+class PaymentStatus(IntEnum):
     PENDING = 0
     COMPLETED = 1
 
-class ContractStatus(Enum):
+class ContractStatus(IntEnum):
     UNDER_NEGOTIATION = 0
     NEGOTIATED = 1
     COMPLETED = 2
 
-class ContractType(Enum):
+class ContractType(IntEnum):
     INBOUND = 0, 
     OUTBOUND = 1,
     NONE = 2
@@ -124,3 +121,8 @@ class Contract:
         self.amount += pmnt.amount
         self.installments.append(pmnt)
     
+    def IsComplete(self):
+        for pmnt in self.installments:
+            if (pmnt.status != PaymentStatus.COMPLETED):
+                return False
+        return True
