@@ -1,5 +1,5 @@
 from planner import PlanningProblem
-from common import ContractStatus, ContractType
+from common import ContractStatus, ContractType, PaymentStatus
 from interest_rate_prediction import InterestRatePrediction
 from common import Contract, ScenarioPayment
 import random
@@ -93,7 +93,20 @@ class ScenarioGenerator:
             rates = p.Rates
             periods = [0, 1, 2, 3, 4, 5] #Deferral Options
             
-            if (InterestRatePrediction.IsClientNegotiating(client) and (ctr.status == ContractStatus.UNDER_NEGOTIATION)):
+
+            #At first check if the contract is already negotatied
+            if (ctr.status == ContractStatus.NEGOTIATED):
+                
+                #Add all included payments to the scenario with their precalculated amounts
+                for inst in ctr.installments:
+                    if (inst.status == PaymentStatus.PENDING):
+                        ctr_copy = ScenarioPayment(ctr.id, ctr.type, inst.period,
+                                                inst.amount, ctr.client, inst.period, inst.period)
+                        ctr_copy.id = ctr.id
+                        ctr_copy.rate = 0.0
+                        scn.AddPayment(ctr_copy)
+            
+            elif (InterestRatePrediction.IsClientNegotiating(client) and (ctr.status == ContractStatus.UNDER_NEGOTIATION)):
                 
                 #Reverse in case of outbound contracts
                 # if (ctr.type == ContractType.INBOUND):
@@ -130,7 +143,7 @@ class ScenarioGenerator:
         scenario_count = 0
         scenarios = {}
         
-        rest_contracts = [c for c in p.contracts if c != contract and c.PlanningHorizonStart >= p.CurrentPeriod and c.status != ContractStatus.COMPLETED]
+        rest_contracts = [c for c in p.contracts if c != contract and c.status != ContractStatus.COMPLETED]
         
         scenarios[contract.id] = {}
 
@@ -149,15 +162,16 @@ class ScenarioGenerator:
             for rate in p.Rates:
                 scenarios[contract.id][1][def_period][str(rate)] = []
 
+                #Scenario Probability Pre-check
+                r_prob = InterestRatePrediction.FindRateProbability(contract.client, contract.type, rate)
+                d_prob = InterestRatePrediction.FindDeferralProbability(contract.client, contract.type, def_period, contract.PlanningHorizonStart)
+                
+                if (r_prob * d_prob < 1e-5):
+                    continue
+
                 for j in range(p.ScenariosPerRate):
                     scn = Scenario(p)
-                    
-                    #Scenario Probability Precheck
-                    r_prob = InterestRatePrediction.FindRateProbability(contract.client, contract.type, rate)
-                    d_prob = InterestRatePrediction.FindDeferralProbability(contract.client, contract.type, def_period, contract.PlanningHorizonStart)
-                    
-                    if (r_prob * d_prob < 1e-5):
-                        continue
+                    scn.decision_probability = r_prob * d_prob
                     
                     #Add main contract in a single installment, with the predefined rate and deferral period
                     main_ctr = ScenarioPayment(contract.id,
@@ -190,8 +204,17 @@ class ScenarioGenerator:
             for rate in p.Rates:
                 scenarios[contract.id][installment_num][str(rate)] = []
                 
+                #Scenario Probability Pre-check
+                r_prob = InterestRatePrediction.FindRateProbability(contract.client, contract.type, rate)
+                d_prob = InterestRatePrediction.FindDeferralProbability(contract.client, contract.type, def_period, contract.PlanningHorizonStart)
+                
+                if (r_prob * d_prob < 1e-5):
+                    continue
+
+                
                 for i in range(p.ScenariosPerRate):
                     scn = Scenario(p)
+                    scn.decision_probability = r_prob * d_prob
 
                     #Split main contract into multiple installments starting from the period included in the contract
                     #Add contracts for all installments
@@ -217,22 +240,7 @@ class ScenarioGenerator:
 
     @staticmethod
     def CalculateScenarioProbability(s):
-        #Caclualte probabilities of the scenario based on its solution
         
-        #Decision Probability
-        main_pmnt = s.payments[0]
-        s.decision_probability = InterestRatePrediction.FindRateProbability(main_pmnt.client,
-                                                                            main_pmnt.type,
-                                                                            main_pmnt.rate * 100)
-        
-        s.decision_probability *= InterestRatePrediction.FindDeferralProbability(main_pmnt.client,
-                                                                                 main_pmnt.type,
-                                                                                 main_pmnt.max_forward_deferral,
-                                                                                 main_pmnt.period)
-        
-        if (s.decision_probability < 1e-5):
-            print("THIS SHOULD NOT HAPPEN")
-
         #Calculate probability of the entire scenario using the scenario solution
         s.probability = 1.0
         s.rate_probability = 1.0

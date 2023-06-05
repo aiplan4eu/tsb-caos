@@ -1,5 +1,6 @@
 from scenario_generator import ScenarioGenerator
 from plan_evaluator import PlanEvaluator, ContractEvaluation
+from interest_rate_prediction import InterestRatePrediction
 from planner import Planner
 from common import Contract, Payment, Client, ContractStatus, ContractType, PaymentStatus
 from matplotlib import pyplot as plt
@@ -255,6 +256,7 @@ class CAOSProblem:
         installments = action["options"].installments
         rate = action["options"].rate
         
+        print("Calculated Prob: ", InterestRatePrediction.FindRateProbability(ctr.client, ctr.type, rate))
         self.UpdateContract(ctr, deferral, rate, installments)
 
     
@@ -408,7 +410,7 @@ class CAOSProblem:
             s.solution = Planner.Solve(p)
             #print("Calculating Probability")
             ScenarioGenerator.CalculateScenarioProbability(s) #Recalculate probabilities
-            #print("Decision Prob", s.decision_probability, "Total Prob", s.probability)
+            
         except Exception as ex:
             log(f"Problem when solving Scenario {s.index}", MessageType.ERROR)
             log(ex, MessageType.ERROR)
