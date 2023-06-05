@@ -28,7 +28,7 @@ class CAOSProblem:
         self.clientMap = {}
 
         self.scenarios = []
-        
+
 
     def CreateRandomInstance(self, export_instance=False):
         self.Balance = 0
@@ -343,37 +343,19 @@ class CAOSProblem:
         if (self.ProcessPayments()):
             self.CurrentPeriod += 1
 
-    def ProcessState(self):
-        #Generate scenarios for the clients with contracts on the first period
-        contract_list = []
-        
-        #Update PlanningHorizon for the planning problem and contracts
-        self.UpdatePlanningHorizon()
-
+    def GetActiveContracts(self):
         #Check for contracts of the current period
+        contract_list = []
         for c in self.contracts:
             if c.PlanningHorizonStart == self.CurrentPeriod and c.status == ContractStatus.UNDER_NEGOTIATION:
                 contract_list.append(c)
-        
-        if (len(contract_list) == 0):
-            print("No remaining contracts for this period. Advancing to the next period")
-            self.AdvancePeriod()
-            self.Report()
-            return self.ProcessState()
-        else:
-            #Ask the user to select a contract to negotiate
-            print("Please select a contract to negotiate: ")
-            for i in range(len(contract_list)):
-                c = contract_list[i]
-                print(f"{i}) Contract {c.id}")
-            selected_contract_id = int(input("Selected Option: "))
-            
-            return contract_list[selected_contract_id]
-        
+
+        return contract_list
 
     def GenerateScenarios(self, ctr):
         self.scenarios, scn_count = ScenarioGenerator.GenerateScenarios(self, ctr)
         log(f'Generated {scn_count} scenarios', MessageType.WARNING)
+        return scn_count
     
     def SolveScenarios(self):
         #At first add all scenarios to a list
@@ -417,104 +399,7 @@ class CAOSProblem:
         finally:
             #print("Done")
             pass
-            
     
-    def SelectAction(self):
-        
-        for contract_id in self.scenarios:
-            action = {'contract_id': contract_id,
-                      'options': None}
-            
-            res = PlanEvaluator.EvaluateContract(contract_id, self)
-            results = [r.toDict() for r in res]
-
-            #Cache results 
-            f = open("report.json", "w")
-            f.write(json.dumps(results))
-            f.close()
-            print("### Analysis logged saved to report.json")
-
-            #Start Interactive Dialog
-            selected_policy = int(input("Please select a desired policy for the client (1: Weighted, 2: Greedy, 3: Optimistic): "))
-
-            #Sort plans based on the selected policy
-            
-            if (selected_policy == 1):
-                plan_list = sorted(res, key=lambda x: x.weighted_objective, reverse=True)
-            elif (selected_policy == 2):
-                plan_list = sorted(res, key=lambda x: x.objective, reverse=True)
-            elif (selected_policy == 3):
-                plan_list = sorted(res, key=lambda x: x.probability, reverse=True)
-
-            plan_list = [p for p in plan_list if p.scenario_num > 0]
-
-            while(len(plan_list) > 0) :
-                negotiation = plan_list.pop(0)
-                
-                print("---------------------: ")
-                print("Negotation Suggestion: ")
-                print("Deferral: ", negotiation.deferral_periods, "periods")
-                print("Installments: ", negotiation.installments)
-                print("Rate: ", negotiation.rate, "%")
-                print("Avg. Decision Prob.", negotiation.decision_probability)
-                print("Avg. Interest Rate Prob.", negotiation.rate_probability)
-                print("Max Interest Rate Prob.", negotiation.max_rate_probability)
-                print("Min Interest Rate Prob.", negotiation.min_rate_probability)
-                print("Avg. Def Date Prob.", negotiation.def_date_probability)
-                print("Avg. Scenario Prob.", negotiation.probability)
-                print("Max Scenario Prob.", negotiation.max_probability)
-                print("Min Scenario Prob.", negotiation.min_probability)
-                print("Avg. Objective.", negotiation.objective)
-                print("Avg. Weighted Objective.", negotiation.weighted_objective)
-                
-                while(True):
-                    accepted = input("Did the negotiation succeed? (Y/N). Enter Q to cancel negotation mode: ")
-
-                    if (accepted == "Y" or accepted == 'y'):
-                        action["options"] = negotiation
-                        return action
-                    elif (accepted == "N" or accepted == 'n'):
-                        break
-                    elif (accepted == "Q"):
-                        print("Negotiations Terminated")
-                        action["options"] = ContractEvaluation()
-                        action["options"].installments = 1
-                        action["options"].rate = 0.0
-                        action["options"].deferral_periods = 0
-                        
-                        return action
-                    else:
-                        print("Invalid Response")
-                        continue
-            
-            #Add default options
-            action["options"] = ContractEvaluation()
-            action["options"].installments = 1
-            action["options"].rate = 0.0
-            action["options"].deferral_periods = 0
-            
-            return action
-
-        
-    
-    def CreatePlot(self, keys, values, figname, policy):
-        #Create bar plot for client
-        f = plt.figure(figsize=(10,5))
-        plt.bar(keys, values)
-        plt.xlabel("Rates")
-        plt.ylabel("Prob")
-        plt.title("Rate recommendation for " + policy)
-        f.savefig(figname, dpi=600)
-
-
-    def AnalyzeState(self, ctr):
-        #Generate Scenarios
-        self.GenerateScenarios(ctr)
-        #Solve Them
-        self.SolveScenarios()
-        #Get Action
-        return self.SelectAction()
-        
 
 
 if (__name__ == "__main__"):
