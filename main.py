@@ -7,14 +7,20 @@ p = CAOSProblem()
 #p.CreateRandomInstance(True)
 
 #Load Instance
-p.ImportState("gen_data.json")
+p.ImportState("test_state.json")
 
 #Report Instance
 p.Report()
 
 while (True):
-    contract = p.ProcessState()
-    action = p.AnalyzeState(contract)
-    p.ApplyAction(action)
-    p.Report()
+    ctr_list = p.GetActiveContracts()
+    contract = ctr_list[0]
+    p.GenerateScenarios(contract)
+    p.SolveScenarios()
+    
+    #p.GenerateActions() #TODO: IMPLEMENT
+    
+    #action = p.AnalyzeState(contract)
+    #£p.ApplyAction(action)
+    #p.Report()
 

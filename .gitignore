@@ -2,3 +2,5 @@
 Scripts
 share
 *.pyc
+etc
+.vscode

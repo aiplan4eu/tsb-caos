@@ -112,6 +112,10 @@ class CAOS_CLI:
         ans = input("Apply? (y/n) ")
         if (ans in ['y', 'Y']):
             self.problem.ApplyAction(self.active_action)
+            print(f"Contract {self.active_ctr.id} Successfully Updated!")
+            #Reset active action and contract once addressed
+            self.active_action = None
+            self.active_ctr = None
         elif (ans in ['n', 'N']):
             return
         else:
@@ -159,83 +163,61 @@ class CAOS_CLI:
         print("Analysis completed successfully")
         
     def SelectAction(self):
+        #Start Interactive Dialog
+        selected_policy = int(input("Please select a desired policy for the client (1: Weighted, 2: Greedy, 3: Optimistic): "))
+        eval_list = self.problem.GeneratePlanEvaluations(self.active_ctr, selected_policy)
         
-        for contract_id in self.problem.scenarios:
-            action = {'contract_id': contract_id,
-                      'options': None}
+        action = {'contract_id': self.active_ctr.id,
+                  'options': None}
+
+        while(len(eval_list) > 0) :
+            negotiation = eval_list.pop(0)
             
-            res = PlanEvaluator.EvaluateContract(contract_id, self.problem)
-            results = [r.toDict() for r in res]
-
-            #Cache results 
-            f = open("report.json", "w")
-            f.write(json.dumps(results))
-            f.close()
-            print("Analysis logged saved to report.json")
-
-            #Start Interactive Dialog
-            selected_policy = int(input("Please select a desired policy for the client (1: Weighted, 2: Greedy, 3: Optimistic): "))
-
-            #Sort plans based on the selected policy
+            print("---------------------: ")
+            print("Negotiation Suggestion: ")
+            print("Deferral: ", negotiation.deferral_periods, "periods")
+            print("Installments: ", negotiation.installments)
+            print("Rate: ", negotiation.rate, "%")
+            print("Avg. Decision Prob.", negotiation.decision_probability)
+            print("Avg. Interest Rate Prob.", negotiation.rate_probability)
+            print("Max Interest Rate Prob.", negotiation.max_rate_probability)
+            print("Min Interest Rate Prob.", negotiation.min_rate_probability)
+            print("Avg. Def Date Prob.", negotiation.def_date_probability)
+            print("Avg. Scenario Prob.", negotiation.probability)
+            print("Max Scenario Prob.", negotiation.max_probability)
+            print("Min Scenario Prob.", negotiation.min_probability)
+            print("Avg. Objective.", negotiation.objective)
+            print("Avg. Weighted Objective.", negotiation.weighted_objective)
             
-            if (selected_policy == 1):
-                plan_list = sorted(res, key=lambda x: x.weighted_objective, reverse=True)
-            elif (selected_policy == 2):
-                plan_list = sorted(res, key=lambda x: x.objective, reverse=True)
-            elif (selected_policy == 3):
-                plan_list = sorted(res, key=lambda x: x.probability, reverse=True)
+            while(True):
+                accepted = input("Did the negotiation succeed? (Y/N). Enter Q to cancel negotiation mode: ")
 
-            plan_list = [p for p in plan_list if p.scenario_num > 0]
-
-            while(len(plan_list) > 0) :
-                negotiation = plan_list.pop(0)
-                
-                print("---------------------: ")
-                print("Negotiation Suggestion: ")
-                print("Deferral: ", negotiation.deferral_periods, "periods")
-                print("Installments: ", negotiation.installments)
-                print("Rate: ", negotiation.rate, "%")
-                print("Avg. Decision Prob.", negotiation.decision_probability)
-                print("Avg. Interest Rate Prob.", negotiation.rate_probability)
-                print("Max Interest Rate Prob.", negotiation.max_rate_probability)
-                print("Min Interest Rate Prob.", negotiation.min_rate_probability)
-                print("Avg. Def Date Prob.", negotiation.def_date_probability)
-                print("Avg. Scenario Prob.", negotiation.probability)
-                print("Max Scenario Prob.", negotiation.max_probability)
-                print("Min Scenario Prob.", negotiation.min_probability)
-                print("Avg. Objective.", negotiation.objective)
-                print("Avg. Weighted Objective.", negotiation.weighted_objective)
-                
-                while(True):
-                    accepted = input("Did the negotiation succeed? (Y/N). Enter Q to cancel negotation mode: ")
-
-                    if (accepted == "Y" or accepted == 'y'):
-                        action["options"] = negotiation
-                        self.active_action = action
-                        return
-                    elif (accepted == "N" or accepted == 'n'):
-                        break
-                    elif (accepted == "Q"):
-                        print("Negotiations Terminated")
-                        action["options"] = ContractEvaluation()
-                        action["options"].installments = 1
-                        action["options"].rate = 0.0
-                        action["options"].deferral_periods = 0
-                        
-                        self.active_action = action
-                        return
-                    else:
-                        print("Invalid Response")
-                        continue
-            
-            #Add default options
-            action["options"] = ContractEvaluation()
-            action["options"].installments = 1
-            action["options"].rate = 0.0
-            action["options"].deferral_periods = 0
-            
-            self.active_action = action
-            break
+                if (accepted == "Y" or accepted == 'y'):
+                    action["options"] = negotiation
+                    self.active_action = action
+                    return
+                elif (accepted == "N" or accepted == 'n'):
+                    break
+                elif (accepted == "Q"):
+                    print("Negotiations Terminated")
+                    action["options"] = ContractEvaluation()
+                    action["options"].installments = 1
+                    action["options"].rate = 0.0
+                    action["options"].deferral_periods = 0
+                    
+                    self.active_action = action
+                    return
+                else:
+                    print("Invalid Response")
+                    continue
+        
+        #Add default options
+        action["options"] = ContractEvaluation()
+        action["options"].installments = 1
+        action["options"].rate = 0.0
+        action["options"].deferral_periods = 0
+        
+        self.active_action = action
 
 
 

@@ -15,12 +15,16 @@ import time
 class CAOSProblem:
     CONTRACT_COUNTER = 0
     
-    def __init__(self, ):
+    def __init__(self, rates=[1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5],
+                 installments=[3, 6], snpr=5):
         self.Balance = 0
         self.PlanningHorizonEnd = 0
         self.CurrentPeriod = 0
         self.LoanRate = 0.0
-        
+        self.Rates = rates
+        self.ScenariosPerRate = snpr
+        self.Installments = installments
+
         self.contracts = []
         self.contractMap = {}
 
@@ -28,6 +32,7 @@ class CAOSProblem:
         self.clientMap = {}
 
         self.scenarios = []
+
 
 
     def CreateRandomInstance(self, export_instance=False):
@@ -225,11 +230,15 @@ class CAOSProblem:
 
     def GetCounterPartyByName(self, name):
         if (name not in self.clientMap):
-            log(f'No client exises with name: {name}', MessageType.WARNING)
+            log(f'No client exists with name: {name}', MessageType.WARNING)
             return None
         return self.clientMap[name]
 
     def AddContract(self, ctr):
+        if (ctr.client.name not in self.clientMap):
+            log(f'Client {ctr.client.name} does not exist', MessageType.WARNING)
+            return False
+        
         #TODO: Adopt a better id system. For the prototype contract id's are overridden
         ctr.id = CAOSProblem.CONTRACT_COUNTER
         self.contracts.append(ctr)
@@ -298,7 +307,7 @@ class CAOSProblem:
             contract.ClearPayments()
 
             #Add new payment
-            pmnt = Payment(contract, f_deferral + self.CurrentPeriod, updated_amount, f_deferral, f_deferral)
+            pmnt = Payment(contract, f_deferral + self.CurrentPeriod, updated_amount)
             contract.AddPayment(pmnt)
             contract.UpdatePlanningHorizon()
 
@@ -309,14 +318,11 @@ class CAOSProblem:
             contract.ClearPayments()
 
             for i in range(f_installments):
-                pmnt = Payment(contract, contract.PlanningHorizonStart + i, installment_amount,
-                                contract.PlanningHorizonStart + i, contract.PlanningHorizonStart + i)
+                pmnt = Payment(contract, contract.PlanningHorizonStart + i, installment_amount)
                 contract.AddPayment(pmnt)
             
             contract.UpdatePlanningHorizon()
             contract.status = ContractStatus.NEGOTIATED
-
-        print(f"Contract {contract.id} Successfully Updated!")
 
     def ProcessPayments(self):
         #At first do a precheck that all contracts due for this period have been negotiated
@@ -351,6 +357,32 @@ class CAOSProblem:
                 contract_list.append(c)
 
         return contract_list
+
+    def GeneratePlanEvaluations(self, ctr, policy_id):
+        res = PlanEvaluator.EvaluateContract(ctr.id, self)
+        results = [r.toDict() for r in res]
+
+        #Cache results 
+        f = open("report.json", "w")
+        f.write(json.dumps(results))
+        f.close()
+        print("Analysis logged saved to report.json")
+
+        #Sort plans based on the selected policy
+        if (policy_id == 1):
+            plan_list = sorted(res, key=lambda x: x.weighted_objective, reverse=True)
+        elif (policy_id == 2):
+            plan_list = sorted(res, key=lambda x: x.objective, reverse=True)
+        elif (policy_id == 3):
+            plan_list = sorted(res, key=lambda x: x.probability, reverse=True)
+
+        #Filter empty actions
+        plan_list = [p for p in plan_list if p.scenario_num > 0]
+
+        return plan_list
+
+    def GenerateAction(self, ctr, evaluation):
+        return {'contract_id': ctr.id, 'options': evaluation}
 
     def GenerateScenarios(self, ctr):
         self.scenarios, scn_count = ScenarioGenerator.GenerateScenarios(self, ctr)
@@ -392,7 +424,6 @@ class CAOSProblem:
             s.solution = Planner.Solve(p)
             #print("Calculating Probability")
             ScenarioGenerator.CalculateScenarioProbability(s) #Recalculate probabilities
-            
         except Exception as ex:
             log(f"Problem when solving Scenario {s.index}", MessageType.ERROR)
             log(ex, MessageType.ERROR)
