@@ -55,13 +55,11 @@ class Client:
 
 
 class Payment:
-    def __init__(self, c, p, a, mfd=0, mbd=0):
+    def __init__(self, c, p, a):
         self.contract = c
         self.period = p
         self.amount = a
         self.status = PaymentStatus.PENDING
-        self.max_forward_deferral = mfd
-        self.max_backward_deferral = mbd
 
     def Finalize(self):
         self.status = PaymentStatus.COMPLETED

@@ -51,16 +51,18 @@ class Scenario:
         p.StartBalance = self.problem.Balance
         p.CurrentPeriod = self.problem.CurrentPeriod
         p.NumberOfClients = self.problem.NumberOfClients
-        p.NumberOfPeriods = self.problem.PlanningHorizonEnd
+        p.NumberOfPeriods = 0
         p.LoanRate = self.problem.LoanRate * 0.01
 
         #Identify Contracts
         for c in self.payments:
+            p.NumberOfPeriods = max(p.NumberOfPeriods, c.max_forward_deferral)
             if (c.type == ContractType.INBOUND): #Inbound
-                p.InboundPayments.append(c)    
+                p.InboundPayments.append(c)
             elif (c.type == ContractType.OUTBOUND): #Outbound
                 p.OutboundPayments.append(c)    
         
+        p.NumberOfPeriods += 1
         return p
 
 
@@ -155,8 +157,8 @@ class ScenarioGenerator:
         
         for def_period in range(1, 3):
             #Do not allow deferrals that exceed the planning horizon
-            if (def_period + contract.PlanningHorizonStart > p.PlanningHorizonEnd - 1):
-                continue
+            #if (def_period + contract.PlanningHorizonStart > p.PlanningHorizonEnd - 1):
+            #    continue
             
             scenarios[contract.id][1][def_period] = {}
             for rate in p.Rates:
@@ -197,8 +199,8 @@ class ScenarioGenerator:
         for installment_num in p.Installments:
             
             #Make sure there are enough period to accomodate the multiple installments after the contract's default period
-            if (installment_num > p.PlanningHorizonEnd - contract.PlanningHorizonStart + 1):
-                continue
+            #if (installment_num > p.PlanningHorizonEnd - contract.PlanningHorizonStart + 1):
+            #    continue
             
             scenarios[contract.id][installment_num] = {}
             for rate in p.Rates:

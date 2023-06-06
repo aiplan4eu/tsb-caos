@@ -20,6 +20,9 @@ class ContractEvaluation:
         self.def_date_probability = 0.0
         self.decision_probability = 0.0
 
+    def Report(self):
+        print(self.toDict())
+
     def toDict(self):
         return {
                     'Deferral Periods': self.deferral_periods,
