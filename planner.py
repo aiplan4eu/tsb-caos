@@ -5,9 +5,10 @@ from unified_planning.model import Fluent
 from typing import cast
 from utilities import log
 
+#import warnings
+#warnings.filterwarnings('ignore') # Ignore warnings
 
 LEAST_ACCEPTED_PROBABILITY = 0.8
-
 
 def convert_to_float(frac):
     sp = frac.split('/')

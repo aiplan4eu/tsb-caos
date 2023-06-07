@@ -10,8 +10,6 @@ from utilities import log, MessageType, random
 from math import sqrt
 import time
 
-
-
 class CAOSProblem:
     CONTRACT_COUNTER = 0
     
@@ -24,10 +22,12 @@ class CAOSProblem:
         self.Rates = rates
         self.ScenariosPerRate = snpr
         self.Installments = installments
+        
 
         self.contracts = []
         self.contractMap = {}
 
+        self.NumberOfClients = 0
         self.clients = []
         self.clientMap = {}
 
@@ -221,12 +221,14 @@ class CAOSProblem:
     def AddCounterParty(self, client):
         if (client.name in self.clients):
             log(f'Client {client.name} exists', MessageType.WARNING)
-            return
+            return False
         
         #Set correct Id and save client
         client.id = len(self.clients)
         self.clients.append(client) # Client List
         self.clientMap[client.name] = client # Client Dictionary using their name as the key
+        self.NumberOfClients +=1 
+        return True
 
     def GetCounterPartyByName(self, name):
         if (name not in self.clientMap):
@@ -245,8 +247,8 @@ class CAOSProblem:
         self.contractMap[ctr.id] = ctr
         CAOSProblem.CONTRACT_COUNTER += 1
         self.UpdatePlanningHorizon()
-        return ctr
-
+        return True
+    
     def GetContractById(self, id):
         if (id not in self.contractMap):
             log(f'No contract exists with id: {id}', MessageType.WARNING)

@@ -1,4 +1,4 @@
-from problem import CAOSProblem
+from problem import CAOSProblem, Client, Contract, ContractType, Payment
 from plan_evaluator import PlanEvaluator, ContractEvaluation
 import os, json
 
@@ -36,29 +36,43 @@ class CAOS_CLI:
         
         #Create Menus
         menu = Menu('main')
-        menu.AddItem(Item('save', 'Save'))
-        menu.AddItem(Item('load', 'Load'))
-        menu.AddItem(Item('report', 'ProblemReport'))
+        
         
         state_menu = Menu('state')
+        state_menu.AddItem(Item('create', 'Create'))
+        state_menu.AddItem(Item('save', 'Save'))
+        state_menu.AddItem(Item('load', 'Load'))
         state_menu.AddItem(Item('process', 'ProcessState'))
         state_menu.AddItem(Item('analyze', 'AnalyzeState'))
-        state_menu.AddItem(Item('report', 'StateReport'))
-        state_menu.AddItem(Item('select', 'SelectAction'))
-        state_menu.AddItem(Item('apply', 'ApplyAction'))
+        state_menu.AddItem(Item('report', 'ProblemReport'))
+        
+        action_menu = Menu('action')
+        action_menu.AddItem(Item('apply', 'ApplyAction'))
+        action_menu.AddItem(Item('select', 'SelectAction'))
+
+        state_menu.AddItem(action_menu)
+
+        add_menu = Menu('add')
+        add_menu.AddItem(Item('client', 'AddClient'))
+        add_menu.AddItem(Item('contract', 'AddContract'))
+        
+        state_menu.AddItem(add_menu)
         menu.AddItem(state_menu)
+        menu.AddItem(Item('help', 'Help'))
+        menu.AddItem(Item('exit', None))
         
         self.active_menu = menu
 
-    def Start(self):
+    def Run(self):
         self.Greet()
         while (True):
             cmd = input("> ")
             
-            if (cmd == "quit"):
+            if (cmd == 'exit'):
+                return
+            elif (cmd == "back"):
                 if (self.active_menu.parent == None):
-                    print("Thanks for using CAOS!")
-                    return    
+                    continue
                 else:
                     self.active_menu = self.active_menu.parent
             elif (cmd == 'help'):
@@ -82,13 +96,17 @@ class CAOS_CLI:
     
     def ProblemReport(self):
         if (self.problem is None):
-            print("No State Loaded")
+            print("Uninitialized state.")
             return
         self.problem.Report()
 
     def StateReport(self):
         print('Current Contract:', self.active_ctr)
         print('Current Action:', self.active_action)
+
+    def Create(self):
+        self.problem = CAOSProblem()
+        print("New state successfully created.")
 
     def Load(self):
         fname = input("Select filename to load from: ")
@@ -104,6 +122,57 @@ class CAOS_CLI:
         fname = input("Select filename to save to: ")
         self.problem.ExportState(fname)
         print(f"State saved successfully to {fname}")
+
+    def AddClient(self):
+        print('Please input client parameters')
+        name = input('Client name: ')
+        neg_pref = float(input('Negotiation Preference (decimal) : '))
+        a1 = float(input('a1 (decimal) : '))
+        b1 = float(input('b1 (decimal) : '))
+        a2 = float(input('a2 (decimal) : '))
+        b2 = float(input('b2 (decimal) : '))
+        epsilon = float(input('epsilon (int) : '))
+        gamma = float(input('gamma (decimal) : '))
+        
+        c = Client(name, a1, b1, a2, b2, neg_pref, epsilon, gamma)
+        
+        if not self.problem.AddCounterParty(c):
+            print('Client insertion failed. Check log')
+        else:
+            print('Client successfully inserted.')
+    
+
+    def AddContract(self):
+        print('Please select Contract Type')
+        print('0) Inbound')
+        print('1) Outbound')
+        c_type = int(input('Select Option: '))
+
+        if (c_type == 0):
+            ctr_type = ContractType.INBOUND
+        else:
+            ctr_type = ContractType.OUTBOUND
+
+        print('Please select Client')
+        for i in range(len(self.problem.clients)):
+            c = self.problem.clients[i]
+            print(f'{i}) {c.name}')
+
+        c_id = int(input('Select Client Option: '))
+        
+        client = self.problem.clients[c_id]
+
+        amount = float(input('Set total contract amount: '))
+        period = int(input('Set due period for the contract: '))
+
+        c = Contract(ctr_type, client)
+        p = Payment(c, period, amount)
+        c.AddPayment(p)
+
+        if not self.problem.AddContract(c):
+            print('Contract insertion failed. Check log.')
+        else:
+            print('Contract successfully inserted')
 
     def ApplyAction(self):
         print("Current Action")
@@ -224,4 +293,4 @@ class CAOS_CLI:
 
 if __name__ == "__main__":
     cli = CAOS_CLI()
-    cli.Start()
+    cli.Run()
