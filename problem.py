@@ -275,7 +275,7 @@ class CAOSProblem:
         installments = action["options"].installments
         rate = action["options"].rate
         
-        print("Calculated Prob: ", InterestRatePrediction.FindRateProbability(ctr.client, ctr.type, rate))
+        #print("Calculated Prob: ", InterestRatePrediction.FindRateProbability(ctr.client, ctr.type, rate))
         self.UpdateContract(ctr, deferral, rate, installments)
 
     
