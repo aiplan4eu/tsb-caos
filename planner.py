@@ -5,10 +5,8 @@ from unified_planning.model import Fluent
 from typing import cast
 from utilities import log
 
-#import warnings
-#warnings.filterwarnings('ignore') # Ignore warnings
-
-LEAST_ACCEPTED_PROBABILITY = 0.8
+import warnings
+warnings.filterwarnings('ignore') # Ignore warnings
 
 def convert_to_float(frac):
     sp = frac.split('/')
@@ -73,7 +71,7 @@ class PlanningSolution:
 class Planner:
     
     @staticmethod
-    def Solve(pp):
+    def Solve(pp, prob_cutoff):
         #Model
         Period = UserType('Period')
         Client = UserType('Client')
@@ -140,7 +138,7 @@ class Planner:
             for p in range(pp.CurrentPeriod, pp.NumberOfPeriods):
                 def_prob = InterestRatePrediction.FindDeferralProbability(c.client, c.type, p, start_p)
 
-                if (def_prob < LEAST_ACCEPTED_PROBABILITY):
+                if (def_prob < prob_cutoff):
                     continue
                 
                 if (p >= min_p and p <= max_p):
@@ -167,7 +165,7 @@ class Planner:
             for p in range(pp.CurrentPeriod, pp.NumberOfPeriods):
                 def_prob = InterestRatePrediction.FindDeferralProbability(c.client, c.type, p, start_p)
 
-                if (def_prob < LEAST_ACCEPTED_PROBABILITY):
+                if (def_prob < prob_cutoff):
                     continue
                 
                 if (p >= min_p and p <= max_p):

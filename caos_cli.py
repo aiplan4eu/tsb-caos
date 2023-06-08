@@ -1,6 +1,6 @@
 from problem import CAOSProblem, Client, Contract, ContractType, Payment
 from plan_evaluator import PlanEvaluator, ContractEvaluation
-import os, json
+import os
 
 class Item:
     def __init__(self, name, f):
@@ -42,6 +42,7 @@ class CAOS_CLI:
         state_menu.AddItem(Item('create', 'Create'))
         state_menu.AddItem(Item('save', 'Save'))
         state_menu.AddItem(Item('load', 'Load'))
+        state_menu.AddItem(Item('config', 'Configure'))
         state_menu.AddItem(Item('process', 'ProcessState'))
         state_menu.AddItem(Item('analyze', 'AnalyzeState'))
         state_menu.AddItem(Item('report', 'ProblemReport'))
@@ -69,6 +70,7 @@ class CAOS_CLI:
             cmd = input("> ")
             
             if (cmd == 'exit'):
+                self.Terminate()
                 return
             elif (cmd == "back"):
                 if (self.active_menu.parent == None):
@@ -93,7 +95,32 @@ class CAOS_CLI:
     
     def Help(self):
         print("Available Commands: ", list(self.active_menu.items.keys()))
+
+    def Configure(self):
+        if (self.problem is None):
+            print("Uninitialized state.")
+            return
+        
+        self.problem.ScenariosPerRate =  int(input("Set Scenarios Per Rate (int): "))
+        self.problem.WorkerNum =  int(input("Set Number of Workers to work on scenarios (int): "))
+        self.problem.DecisionProbCutoff = float(input("Set cutoff for decision probabilities (decimal): "))
+        self.problem.DefDateProbCutoff = float(input("Set Deferral Date Probability Cutoff (decimal): "))
+        self.problem.IntRateProbCutoff = float(input("Set Interest Rate Probability Cutoff (decimal): "))
     
+    def Terminate(self):
+        #Ask user if they wish to save changes
+        while(True):
+            ans = input("Save changes? (Y/N): ")
+            
+            if (ans in ['Y', 'y']):
+                self.Save()
+                return
+            elif (ans in ['N', 'n']):
+                return
+            else:
+                continue
+
+        
     def ProblemReport(self):
         if (self.problem is None):
             print("Uninitialized state.")
@@ -176,7 +203,10 @@ class CAOS_CLI:
 
     def ApplyAction(self):
         print("Current Action")
-        print(self.active_action)
+        print(f"Contract : {self.active_action['contract_id']}")
+        print(f"Deferral : {self.active_action['options'].deferral_periods} period(s)")
+        print(f"Interest Rate : {self.active_action['options'].rate} %")
+        print(f"No. Installments : {self.active_action['options'].installments}")
         
         ans = input("Apply? (y/n) ")
         if (ans in ['y', 'Y']):
@@ -246,17 +276,14 @@ class CAOS_CLI:
             print("Negotiation Suggestion: ")
             print("Deferral: ", negotiation.deferral_periods, "periods")
             print("Installments: ", negotiation.installments)
-            print("Rate: ", negotiation.rate, "%")
-            print("Avg. Decision Prob.", negotiation.decision_probability)
-            print("Avg. Interest Rate Prob.", negotiation.rate_probability)
-            print("Max Interest Rate Prob.", negotiation.max_rate_probability)
-            print("Min Interest Rate Prob.", negotiation.min_rate_probability)
-            print("Avg. Def Date Prob.", negotiation.def_date_probability)
-            print("Avg. Scenario Prob.", negotiation.probability)
-            print("Max Scenario Prob.", negotiation.max_probability)
-            print("Min Scenario Prob.", negotiation.min_probability)
-            print("Avg. Objective.", negotiation.objective)
-            print("Avg. Weighted Objective.", negotiation.weighted_objective)
+            print(f"Rate: {negotiation.rate}%")
+            print(f"Scenario Evaluations: {negotiation.scenario_num}")
+            print(f"Avg. Counterparty Acceptance Prob. : {negotiation.decision_probability:.2%}")
+            print(f"Avg. Total Interest Rate Prob. : {negotiation.rate_probability:.2%} (Min: {negotiation.min_rate_probability:.2%} Max: {negotiation.max_rate_probability:.2%})")
+            print(f"Avg. Total Def Date Prob. : {negotiation.def_date_probability:.2%} (Min: {negotiation.min_def_date_probability:.2%} Max: {negotiation.max_def_date_probability:.2%})")
+            print(f"Avg. Total Prob. : {negotiation.probability:.2%} (Min: {negotiation.min_probability:.2%} Max: {negotiation.max_probability:.2%})")
+            print(f"Avg. Objective. : {negotiation.objective:.2f}")
+            print(f"Avg. Weighted Objective. : {negotiation.weighted_objective:.2f}")
             
             while(True):
                 accepted = input("Did the negotiation succeed? (Y/N). Enter Q to cancel negotiation mode: ")
@@ -267,7 +294,7 @@ class CAOS_CLI:
                     return
                 elif (accepted == "N" or accepted == 'n'):
                     break
-                elif (accepted == "Q"):
+                elif (accepted == "Q"): 
                     print("Negotiations Terminated")
                     action["options"] = ContractEvaluation()
                     action["options"].installments = 1

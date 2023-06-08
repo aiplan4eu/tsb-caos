@@ -98,10 +98,8 @@ class InterestRatePrediction:
 
 
     @staticmethod   
-    def GetInterestRateForClient(c, ctr_type, rates, min_sample_val, max_sample_val):
+    def GetInterestRateForClient(c, ctr_type, rates, min_sample_val):
         sample = random.random()
-        
-        sample = min(max(random.random(), min_sample_val), max_sample_val)
         
         #Filter rates to satisfy probability requirements
         eff_rates = []
@@ -111,6 +109,8 @@ class InterestRatePrediction:
 
         if len(eff_rates) == 0:
             log(f"Could not find any rate for client {c.name}. Recheck thresholds", MessageType.ERROR)
+            for r in rates:
+                print(r, InterestRatePrediction.FindRateProbability(c, ctr_type, r))
             assert(False)
         
         t_sum = sum([InterestRatePrediction.FindRateProbability(c, ctr_type, r) for r in eff_rates])

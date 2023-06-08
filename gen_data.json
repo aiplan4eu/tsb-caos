@@ -23,6 +23,10 @@
         6
     ],
     "ScenariosPerRate": 4,
+    "WorkerNum" : 4,
+    "DecisionProbCutoff" : 0.2,
+    "DefDateProbCutoff" : 0.8,
+    "IntRateProbCutoff" : 0.7,
     "Clients": {
         "Client0": {
             "rate_in_alpha": 11.780850992097832,

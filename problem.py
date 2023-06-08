@@ -13,17 +13,19 @@ import time
 class CAOSProblem:
     CONTRACT_COUNTER = 0
     
-    def __init__(self, rates=[1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5],
-                 installments=[3, 6], snpr=5):
+    def __init__(self):
         self.Balance = 0
         self.PlanningHorizonEnd = 0
         self.CurrentPeriod = 0
         self.LoanRate = 0.0
-        self.Rates = rates
-        self.ScenariosPerRate = snpr
-        self.Installments = installments
+        self.Rates = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5]
+        self.ScenariosPerRate = 5
+        self.WorkerNum = 4
+        self.DefDateProbCutoff = 0.8
+        self.DecisionProbCutoff = 0.2
+        self.IntRateProbCutoff = 0.6
+        self.Installments = [3, 6]
         
-
         self.contracts = []
         self.contractMap = {}
 
@@ -98,7 +100,10 @@ class CAOSProblem:
         data["Rates"] = self.Rates
         data["Installments"] = self.Installments
         data["ScenariosPerRate"] = self.ScenariosPerRate
-        
+        data["DecisionProbCutoff"] = self.DecisionProbCutoff
+        data["DefDateProbCutoff"] = self.DefDateProbCutoff
+        data["IntRateProbCutoff"] = self.IntRateProbCutoff
+             
         data["Clients"] = {}
         for c in self.clients:
             data["Clients"][c.name] = {"rate_in_alpha": c.rate_in_a, 
@@ -141,6 +146,9 @@ class CAOSProblem:
         self.ScenariosPerRate = instance["ScenariosPerRate"]
         self.Rates = instance["Rates"]
         self.Installments = instance["Installments"]
+        self.DecisionProbCutoff = instance["DecisionProbCutoff"]
+        self.DefDateProbCutoff = instance["DefDateProbCutoff"] 
+        self.IntRateProbCutoff = instance["IntRateProbCutoff"] 
         
         #Add Clients
         for c in instance["Clients"]:
@@ -368,7 +376,7 @@ class CAOSProblem:
         f = open("report.json", "w")
         f.write(json.dumps(results))
         f.close()
-        print("Analysis logged saved to report.json")
+        print("Analysis log saved to report.json")
 
         #Sort plans based on the selected policy
         if (policy_id == 1):
@@ -379,7 +387,7 @@ class CAOSProblem:
             plan_list = sorted(res, key=lambda x: x.probability, reverse=True)
 
         #Filter empty actions
-        plan_list = [p for p in plan_list if p.scenario_num > 0]
+        plan_list = [p for p in plan_list if p.scenario_num > 0 and p.decision_probability > self.DecisionProbCutoff]
 
         return plan_list
 
@@ -409,10 +417,9 @@ class CAOSProblem:
                             scenario_list.append(s)
 
         #Create thread pool
-        processes_num = 2
         st = time.time()
-        log(f'Solving {len(scenario_list)} scenarios using {processes_num} threads', MessageType.INFO)
-        pool = ThreadPool(processes=processes_num)
+        log(f'Solving {len(scenario_list)} scenarios using {self.WorkerNum} threads', MessageType.INFO)
+        pool = ThreadPool(processes=self.WorkerNum)
         pool.map(self.SolveScenario, scenario_list)
         pool.close()
         pool.join()
@@ -423,7 +430,7 @@ class CAOSProblem:
         p = s.GeneratePlanningProblem()
         #Save the planning problem solution in the scenario
         try:
-            s.solution = Planner.Solve(p)
+            s.solution = Planner.Solve(p, self.DefDateProbCutoff)
             #print("Calculating Probability")
             ScenarioGenerator.CalculateScenarioProbability(s) #Recalculate probabilities
         except Exception as ex:

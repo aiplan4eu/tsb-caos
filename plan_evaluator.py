@@ -18,6 +18,8 @@ class ContractEvaluation:
         self.max_rate_probability = 0.0
         self.min_rate_probability = 0.0
         self.def_date_probability = 0.0
+        self.max_def_date_probability = 0.0
+        self.min_def_date_probability = 0.0
         self.decision_probability = 0.0
 
     def Report(self):
@@ -59,6 +61,8 @@ class PlanEvaluator:
         p5_val_min = 1.0
         p5_val_max = 0
         p6_val = 0
+        p6_val_min = 1.0
+        p6_val_max = 0
         
         #Filter Scenarios
         eff_scn_list = [s for s in scn_list if s.solution != None]
@@ -75,6 +79,8 @@ class PlanEvaluator:
             p5_val_min = min(p5_val_min, scn.rate_probability)
             p5_val_max = max(p5_val_max, scn.rate_probability)
             p6_val += scn.def_date_probability
+            p6_val_min = min(p6_val_min, scn.def_date_probability)
+            p6_val_max = max(p6_val_max, scn.def_date_probability)
         
         p1_val /= float(problem.ScenariosPerRate)
         p2_val /= float(problem.ScenariosPerRate)
@@ -96,6 +102,8 @@ class PlanEvaluator:
         evaluation.max_rate_probability = p5_val_max
         evaluation.min_rate_probability = p5_val_min
         evaluation.def_date_probability = p6_val
+        evaluation.max_def_date_probability = p6_val_max
+        evaluation.min_def_date_probability = p6_val_min
         evaluation.decision_probability = p4_val
         evaluation.objective = p3_val
 

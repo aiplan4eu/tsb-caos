@@ -92,10 +92,9 @@ class ScenarioGenerator:
         for ctr in rem_contracts:
             client = ctr.client
             
-            rates = p.Rates
+            rates = [0.0] + p.Rates
             periods = [0, 1, 2, 3, 4, 5] #Deferral Options
             
-
             #At first check if the contract is already negotatied
             if (ctr.status == ContractStatus.NEGOTIATED):
                 
@@ -116,7 +115,7 @@ class ScenarioGenerator:
                 # elif (ctr.type == ContractType.OUTBOUND):
                 #     periods = reversed(periods)
                 
-                rate, r_prob = InterestRatePrediction.GetInterestRateForClient(client, ctr.type, rates, 0.5, 1.0)
+                rate, r_prob = InterestRatePrediction.GetInterestRateForClient(client, ctr.type, rates, p.IntRateProbCutoff)
                 deferral_gap = client.deferral_openness
                 
                 if (r_prob < 0.5):
