@@ -204,7 +204,7 @@ class Planner:
         direct_pay_action.add_effect(out_contract_status(rel_contract), True)
         problem.add_action(direct_pay_action)
 
-
+        
         #Action D: Advance Period
         period_advance_action = unified_planning.model.InstantaneousAction('advance_period', from_period=Period, to_period=Period)
         from_period = period_advance_action.parameter('from_period')

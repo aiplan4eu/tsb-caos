@@ -82,12 +82,12 @@ class PlanEvaluator:
             p6_val_min = min(p6_val_min, scn.def_date_probability)
             p6_val_max = max(p6_val_max, scn.def_date_probability)
         
-        p1_val /= float(problem.ScenariosPerRate)
-        p2_val /= float(problem.ScenariosPerRate)
-        p3_val /= float(problem.ScenariosPerRate)
-        p4_val /= float(problem.ScenariosPerRate)
-        p5_val /= float(problem.ScenariosPerRate)
-        p6_val /= float(problem.ScenariosPerRate)
+        p1_val /= float(len(eff_scn_list))
+        p2_val /= float(len(eff_scn_list))
+        p3_val /= float(len(eff_scn_list))
+        p4_val /= float(len(eff_scn_list))
+        p5_val /= float(len(eff_scn_list))
+        p6_val /= float(len(eff_scn_list))
         
         evaluation = ContractEvaluation()
         evaluation.scenario_num = len(eff_scn_list)
