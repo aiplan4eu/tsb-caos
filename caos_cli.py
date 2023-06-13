@@ -1,6 +1,6 @@
 from problem import CAOSProblem, Client, Contract, ContractType, Payment
 from plan_evaluator import PlanEvaluator, ContractEvaluation
-import os
+import os, time
 
 class Item:
     def __init__(self, name, f):
@@ -254,12 +254,14 @@ class CAOS_CLI:
         if (self.active_ctr is None):
             print("Please process state first")
 
+        start = time.time_ns()
         #Generate Scenarios
         scn_count = self.problem.GenerateScenarios(self.active_ctr)
         print(f"{scn_count} Scenarios Generated")
         #Solve Them
         self.problem.SolveScenarios()
-        print("Analysis completed successfully")
+        elapsed = time.time_ns() - start
+        print(f"Analysis completed successfully in {elapsed / 1000000000.0} s")
         
     def SelectAction(self):
         #Start Interactive Dialog
