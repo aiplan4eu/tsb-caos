@@ -291,11 +291,6 @@ class CAOSProblem:
             log("Contract object does not belong to problem", MessageType.ERROR)
             return
 
-        if (contract.PlanningHorizonStart != self.CurrentPeriod):
-            print("Unable to finalize contract. Check log")
-            log("Finalizing a future contract is not yet supported", MessageType.WARNING)
-            return
-
         if (contract.status == ContractStatus.COMPLETED):
             print("Contract already finalized. Check log")
             log("Processing of completed contracts is not yet supported", MessageType.WARNING)
@@ -317,10 +312,8 @@ class CAOSProblem:
             contract.ClearPayments()
 
             #Add new payment
-            pmnt = Payment(contract, f_deferral + self.CurrentPeriod, updated_amount)
+            pmnt = Payment(contract, f_deferral + contract.PlanningHorizonStart, updated_amount)
             contract.AddPayment(pmnt)
-            contract.UpdatePlanningHorizon()
-
         else:
             updated_amount = (1.0 + 0.01 * f_rate) * contract.amount
             installment_amount = updated_amount / f_installments
@@ -331,8 +324,9 @@ class CAOSProblem:
                 pmnt = Payment(contract, contract.PlanningHorizonStart + i, installment_amount)
                 contract.AddPayment(pmnt)
             
-            contract.UpdatePlanningHorizon()
             contract.status = ContractStatus.NEGOTIATED
+        
+        contract.UpdatePlanningHorizon()
 
     def ProcessPayments(self):
         #At first do a precheck that all contracts due for this period have been negotiated
@@ -359,14 +353,16 @@ class CAOSProblem:
         if (self.ProcessPayments()):
             self.CurrentPeriod += 1
 
-    def GetActiveContracts(self):
-        #Check for contracts of the current period
+    def GetContracts(self, sp, ep):
+        #Check for contracts within the given period range
         contract_list = []
         for c in self.contracts:
-            if c.PlanningHorizonStart == self.CurrentPeriod and c.status == ContractStatus.UNDER_NEGOTIATION:
+            if c.PlanningHorizonStart >=  sp and c.PlanningHorizonStart <= ep and c.status == ContractStatus.UNDER_NEGOTIATION:
                 contract_list.append(c)
-
         return contract_list
+
+    def GetActiveContracts(self):
+        return self.GetContracts(0, 0)
 
     def GeneratePlanEvaluations(self, ctr, policy_id):
         res = PlanEvaluator.EvaluateContract(ctr.id, self)
@@ -390,7 +386,7 @@ class CAOSProblem:
         plan_list = [p for p in plan_list if p.scenario_num > 0 and p.decision_probability > self.DecisionProbCutoff]
 
         return plan_list
-
+    
     def GenerateAction(self, ctr, evaluation):
         return {'contract_id': ctr.id, 'options': evaluation}
 

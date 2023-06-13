@@ -43,8 +43,8 @@ class CAOS_CLI:
         state_menu.AddItem(Item('save', 'Save'))
         state_menu.AddItem(Item('load', 'Load'))
         state_menu.AddItem(Item('config', 'Configure'))
-        state_menu.AddItem(Item('process', 'ProcessState'))
         state_menu.AddItem(Item('analyze', 'AnalyzeState'))
+        state_menu.AddItem(Item('advance', 'AdvanceState'))
         state_menu.AddItem(Item('report', 'ProblemReport'))
         
         action_menu = Menu('action')
@@ -53,11 +53,18 @@ class CAOS_CLI:
 
         state_menu.AddItem(action_menu)
 
-        add_menu = Menu('add')
-        add_menu.AddItem(Item('client', 'AddClient'))
-        add_menu.AddItem(Item('contract', 'AddContract'))
+        client_menu = Menu("client")
+        client_menu.AddItem(Item('add', 'AddClient'))
+        client_menu.AddItem(Item('view', 'ViewClient'))
         
-        state_menu.AddItem(add_menu)
+        contract_menu = Menu("contract")
+        contract_menu.AddItem(Item('add', 'AddContract'))
+        contract_menu.AddItem(Item('view', 'ViewContract'))
+        contract_menu.AddItem(Item('select', 'SelectContract'))
+
+        state_menu.AddItem(client_menu)
+        state_menu.AddItem(contract_menu)
+        
         menu.AddItem(state_menu)
         menu.AddItem(Item('help', 'Help'))
         menu.AddItem(Item('exit', None))
@@ -122,8 +129,7 @@ class CAOS_CLI:
 
         
     def ProblemReport(self):
-        if (self.problem is None):
-            print("Uninitialized state.")
+        if not self.CheckState():
             return
         self.problem.Report()
 
@@ -131,6 +137,12 @@ class CAOS_CLI:
         print('Current Contract:', self.active_ctr)
         print('Current Action:', self.active_action)
 
+    def CheckState(self):
+        if (self.problem is None):
+            print("Uninitialized state.")
+            return False
+        return True
+        
     def Create(self):
         self.problem = CAOSProblem()
         print("New state successfully created.")
@@ -150,7 +162,28 @@ class CAOS_CLI:
         self.problem.ExportState(fname)
         print(f"State saved successfully to {fname}")
 
+    def ViewClient(self):
+        if not self.CheckState():
+            return
+        
+        if (len(self.problem.clients) == 0):
+            print("No clients registered to the system")
+            return
+        else:
+            #Ask the user to select a contract to negotiate
+            print("Please select a client to overview: ")
+            for i in range(len(self.problem.clients)):
+                c = self.problem.clients[i]
+                print(f"{i}) Client {c.name}")
+
+            selected_contract_id = int(input("Selected Option: "))
+            c = self.problem.clients[selected_contract_id]
+            c.Report()
+
     def AddClient(self):
+        if not self.CheckState():
+            return
+        
         print('Please input client parameters')
         name = input('Client name: ')
         neg_pref = float(input('Negotiation Preference (decimal) : '))
@@ -170,6 +203,8 @@ class CAOS_CLI:
     
 
     def AddContract(self):
+        if not self.CheckState():
+            return
         print('Please select Contract Type')
         print('0) Inbound')
         print('1) Outbound')
@@ -201,7 +236,52 @@ class CAOS_CLI:
         else:
             print('Contract successfully inserted')
 
+    def ViewContract(self):
+        if not self.CheckState():
+            return
+        
+        if (len(self.problem.contracts) == 0):
+            print("No contracts registered to the system")
+            return
+        else:
+            #Ask the user to select a contract to negotiate
+            print("Please select a client to overview: ")
+            for i in range(len(self.problem.contracts)):
+                c = self.problem.contracts[i]
+                print(f"{i}) Contract {c.id}")
+
+            selected_contract_id = int(input("Selected Option: "))
+            c = self.problem.contracts[selected_contract_id]
+            self.problem.ReportContract(c)
+
+    def SelectContract(self):
+        if not self.CheckState():
+            return
+        
+        print("Please select contract period range:")
+        start_p = int(input("From Period: "))
+        end_p = int(input("To Period: "))
+        
+        #Get contracts
+        contract_list = self.problem.GetContracts(start_p, end_p)
+        
+        if (len(contract_list) == 0):
+            print("No contracts for the selected period range")
+            return
+        else:
+            #Ask the user to select a contract to negotiate
+            print("Please select a contract to negotiate: ")
+            for i in range(len(contract_list)):
+                c = contract_list[i]
+                print(f"{i}) Contract {c.id}")
+            selected_contract_id = int(input("Selected Option: "))
+            
+            #Set Active Contract
+            self.active_ctr = contract_list[selected_contract_id]
+
     def ApplyAction(self):
+        if not self.CheckState():
+            return
         print("Current Action")
         print(f"Contract : {self.active_action['contract_id']}")
         print(f"Deferral : {self.active_action['options'].deferral_periods} period(s)")
@@ -220,35 +300,16 @@ class CAOS_CLI:
         else:
             print('Please try again.')
 
-    def ProcessState(self):
-        if (self.problem is None):
-            print("No State Loaded")
-            return
-
         #Update PlanningHorizon for the planning problem and contracts
         self.problem.UpdatePlanningHorizon()
 
-        #Get active contracts
-        contract_list = self.problem.GetActiveContracts()
-
-        if (len(contract_list) == 0):
-            print("No remaining contracts for this period. Advancing to the next period")
-            self.problem.AdvancePeriod()
-            return self.ProcessState()
-        else:
-            #Ask the user to select a contract to negotiate
-            print("Please select a contract to negotiate: ")
-            for i in range(len(contract_list)):
-                c = contract_list[i]
-                print(f"{i}) Contract {c.id}")
-            selected_contract_id = int(input("Selected Option: "))
-        
-        #Set Active Contract
-        self.active_ctr = contract_list[selected_contract_id]
-
+    def AdvanceState(self):
+        if not self.CheckState():
+            return
+        self.problem.AdvancePeriod()
+            
     def AnalyzeState(self):
-        if (self.problem is None):
-            print("No State Loaded")
+        if not self.CheckState():
             return
         
         if (self.active_ctr is None):
@@ -316,8 +377,6 @@ class CAOS_CLI:
         action["options"].deferral_periods = 0
         
         self.active_action = action
-
-
 
 
 if __name__ == "__main__":

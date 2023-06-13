@@ -52,6 +52,12 @@ class Client:
         
         self.def_in_b1 = 1 + (-def_incline / self.def_in_p1)
         self.def_in_b2 = 1 + (-def_incline / self.def_in_p2)
+    
+    def Report(self):
+        print("Name: ", self.name)
+        print("Parameters:")
+        print(f"delta: {self.negotiation_openness} a1: {self.rate_in_a}, b1: {self.rate_in_b}, a2: {self.rate_out_a}, b2: {self.rate_out_b}, gamma: {self.deferral_incline}, epsilon: {self.deferral_openness}")
+    
 
 
 class Payment:
@@ -88,6 +94,7 @@ class ScenarioPayment:
         self.client = c
         self.max_forward_deferral = mfd
         self.max_backward_deferral = mbd
+        self.fixed = False
 
 class Contract:
     def __init__(self, t, c):
@@ -99,7 +106,6 @@ class Contract:
         self.status = ContractStatus.UNDER_NEGOTIATION
         self.PlanningHorizonEnd = -1
         self.PlanningHorizonStart = -1
-
 
     def UpdatePlanningHorizon(self):
         self.PlanningHorizonEnd = 0

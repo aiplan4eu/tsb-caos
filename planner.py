@@ -138,7 +138,7 @@ class Planner:
             for p in range(pp.CurrentPeriod, pp.NumberOfPeriods):
                 def_prob = InterestRatePrediction.FindDeferralProbability(c.client, c.type, p, start_p)
 
-                if (def_prob < prob_cutoff):
+                if (def_prob < prob_cutoff and not c.fixed):
                     continue
                 
                 if (p >= min_p and p <= max_p):
@@ -165,7 +165,7 @@ class Planner:
             for p in range(pp.CurrentPeriod, pp.NumberOfPeriods):
                 def_prob = InterestRatePrediction.FindDeferralProbability(c.client, c.type, p, start_p)
 
-                if (def_prob < prob_cutoff):
+                if (def_prob < prob_cutoff and not c.fixed):
                     continue
                 
                 if (p >= min_p and p <= max_p):

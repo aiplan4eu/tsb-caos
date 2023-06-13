@@ -42,7 +42,7 @@ class InterestRatePrediction:
     def FindDeferralProbabilityOutbound(client, p):
         #p is the difference in periods from the original date
         
-        #Assymptotic Function that describtes the acceptance probability of a client for a specific deferral
+        #Asymptotic Function that describes the acceptance probability of a client for a specific deferral
         #TODO: In the future this can be improved to take the payment details into account
         
         if (p > client.deferral_openness):

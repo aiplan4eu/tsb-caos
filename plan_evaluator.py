@@ -118,6 +118,10 @@ class PlanEvaluator:
             if (installment_num == 1): #Check for single installment scenarios (includes deferral periods)
                 for def_period in problem.scenarios[ctr_id][1]:
                     for rate in problem.scenarios[ctr_id][1][def_period]:
+                        #Skip option if there are no generated scenarios
+                        if len(problem.scenarios[ctr_id][1][def_period][rate])== 0:
+                            continue
+                        
                         evaluation = PlanEvaluator.EvaluateAlternativeScenarios(problem, 
                                                                                 problem.scenarios[ctr_id][1][def_period][rate], 
                                                                                 float(rate), 
@@ -125,6 +129,9 @@ class PlanEvaluator:
                         ctr_evaluations.append(evaluation)
             else: #Check for multiple installment scenarios (no deferral)
                 for rate in problem.scenarios[ctr_id][installment_num]:
+                    #Skip option if there are no generated scenarios
+                    if len(problem.scenarios[ctr_id][installment_num][rate]) == 0:
+                        continue
                     evaluation = PlanEvaluator.EvaluateAlternativeScenarios(problem, 
                                                                             problem.scenarios[ctr_id][installment_num][rate], 
                                                                             float(rate), 0, installment_num)
