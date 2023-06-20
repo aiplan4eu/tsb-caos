@@ -1,6 +1,6 @@
 import unified_planning
 from unified_planning.shortcuts import *
-from interest_rate_prediction import InterestRatePrediction
+from negotiation_prediction import NegotiationPrediction
 from unified_planning.model import Fluent
 from typing import cast
 from utilities import log

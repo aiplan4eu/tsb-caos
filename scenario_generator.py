@@ -1,6 +1,6 @@
 from planner import PlanningProblem
 from common import ContractStatus, ContractType, PaymentStatus
-from interest_rate_prediction import InterestRatePrediction
+from negotiation_prediction import NegotiationPrediction
 from common import Contract, ScenarioPayment
 import random
 from math import sqrt, pi, exp
@@ -106,7 +106,7 @@ class ScenarioGenerator:
                         ctr_copy.rate = 0.0
                         scn.AddPayment(ctr_copy)
             
-            elif (InterestRatePrediction.IsClientNegotiating(client) and (ctr.status == ContractStatus.UNDER_NEGOTIATION)):
+            elif (NegotiationPrediction.IsClientNegotiating(client) and (ctr.status == ContractStatus.UNDER_NEGOTIATION)):
                 
                 #Reverse in case of outbound contracts
                 # if (ctr.type == ContractType.INBOUND):
@@ -114,7 +114,7 @@ class ScenarioGenerator:
                 # elif (ctr.type == ContractType.OUTBOUND):
                 #     periods = reversed(periods)
                 
-                rate, r_prob = InterestRatePrediction.GetInterestRateForClient(client, ctr.type, rates, p.IntRateProbCutoff)
+                rate, r_prob = NegotiationPrediction.GetInterestRateForClient(client, ctr.type, rates, p.IntRateProbCutoff)
                 deferral_gap = client.deferral_openness
                 
                 if (r_prob < 0.5):
@@ -165,8 +165,8 @@ class ScenarioGenerator:
                 scenarios[contract.id][1][def_period][str(rate)] = []
 
                 #Scenario Probability Pre-check
-                r_prob = InterestRatePrediction.FindRateProbability(contract.client, contract.type, rate)
-                d_prob = InterestRatePrediction.FindDeferralProbability(contract.client, contract.type, def_period + contract.PlanningHorizonStart, contract.PlanningHorizonStart)
+                r_prob = NegotiationPrediction.FindRateProbability(contract.client, contract.type, rate)
+                d_prob = NegotiationPrediction.FindDeferralProbability(contract.client, contract.type, def_period + contract.PlanningHorizonStart, contract.PlanningHorizonStart)
                 
                 if (r_prob * d_prob < 1e-5):
                     continue
@@ -208,8 +208,8 @@ class ScenarioGenerator:
                 scenarios[contract.id][installment_num][str(rate)] = []
                 
                 #Scenario Probability Pre-check
-                r_prob = InterestRatePrediction.FindRateProbability(contract.client, contract.type, rate)
-                d_prob = InterestRatePrediction.FindDeferralProbability(contract.client, contract.type, def_period, contract.PlanningHorizonStart)
+                r_prob = NegotiationPrediction.FindRateProbability(contract.client, contract.type, rate)
+                d_prob = NegotiationPrediction.FindDeferralProbability(contract.client, contract.type, def_period, contract.PlanningHorizonStart)
                 
                 if (r_prob * d_prob < 1e-5):
                     continue
@@ -231,7 +231,7 @@ class ScenarioGenerator:
                         main_ctr.fixed = True
                         scn.AddPayment(main_ctr)
                     
-                    scn.probability *= InterestRatePrediction.FindRateProbability(contract.client, contract.type, rate)
+                    scn.probability *= NegotiationPrediction.FindRateProbability(contract.client, contract.type, rate)
                     
                     ScenarioGenerator.PopulateScenarios(p, scn, rest_contracts)
                     scenarios[contract.id][installment_num][str(rate)].append(scn)
@@ -264,8 +264,8 @@ class ScenarioGenerator:
                 ctr_type = ctr['Type']
                 period = ctr['StartPeriod']
                 
-                r_prob = InterestRatePrediction.FindRateProbability(client, ctr_type, rate * 100)
-                d_prob = InterestRatePrediction.FindDeferralProbability(client, ctr_type, p, period)
+                r_prob = NegotiationPrediction.FindRateProbability(client, ctr_type, rate * 100)
+                d_prob = NegotiationPrediction.FindDeferralProbability(client, ctr_type, p, period)
                 
                 s.probability *= r_prob
                 s.rate_probability *= r_prob

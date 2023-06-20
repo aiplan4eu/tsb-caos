@@ -5,7 +5,7 @@ from utilities import log, MessageType
 
 
 
-class InterestRatePrediction:
+class NegotiationPrediction:
     def __init__(self):
         pass
 
@@ -13,9 +13,9 @@ class InterestRatePrediction:
     @staticmethod
     def FindDeferralProbability(client, ctr_type, p, start_p):
         if (ctr_type == ContractType.INBOUND):
-            return InterestRatePrediction.FindDeferralProbabilityInbound(client, p - start_p)
+            return NegotiationPrediction.FindDeferralProbabilityInbound(client, p - start_p)
         elif (ctr_type == ContractType.OUTBOUND):
-            return InterestRatePrediction.FindDeferralProbabilityOutbound(client, p - start_p)
+            return NegotiationPrediction.FindDeferralProbabilityOutbound(client, p - start_p)
         else:
             log(f"Unknown contract type {ctr_type}", MessageType.ERROR)
     
@@ -23,7 +23,7 @@ class InterestRatePrediction:
     def FindDeferralProbabilityInbound(client, p):
         #p is the difference in periods from the original date
         
-        #Assymptotic Function that describtes the acceptance probability of a client for a specific deferral
+        #Asymptotic Function that describes the acceptance probability of a client for a specific deferral
         #TODO: In the future this can be improved to take the payment details into account
         
         if (p < -client.deferral_openness):
@@ -60,9 +60,9 @@ class InterestRatePrediction:
     @staticmethod
     def FindRateProbability(client, ctr_type, rate):
         if (ctr_type == ContractType.INBOUND):
-            return InterestRatePrediction.FindRateProbabilityInbound(client, rate)
+            return NegotiationPrediction.FindRateProbabilityInbound(client, rate)
         elif (ctr_type == ContractType.OUTBOUND):
-            return InterestRatePrediction.FindRateProbabilityOutbound(client, -rate)
+            return NegotiationPrediction.FindRateProbabilityOutbound(client, -rate)
         else:
             log(f"Unknown contract type {ctr_type}", MessageType.ERROR)
 
@@ -104,21 +104,21 @@ class InterestRatePrediction:
         #Filter rates to satisfy probability requirements
         eff_rates = []
         for r in rates:
-            if (InterestRatePrediction.FindRateProbability(c, ctr_type, r) > min_sample_val):
+            if (NegotiationPrediction.FindRateProbability(c, ctr_type, r) > min_sample_val):
                 eff_rates.append(r)
 
         if len(eff_rates) == 0:
             log(f"Could not find any rate for client {c.name}. Recheck thresholds", MessageType.ERROR)
             for r in rates:
-                print(r, InterestRatePrediction.FindRateProbability(c, ctr_type, r))
+                print(r, NegotiationPrediction.FindRateProbability(c, ctr_type, r))
             assert(False)
         
-        t_sum = sum([InterestRatePrediction.FindRateProbability(c, ctr_type, r) for r in eff_rates])
+        t_sum = sum([NegotiationPrediction.FindRateProbability(c, ctr_type, r) for r in eff_rates])
         t_sum_inv = 1.0 / t_sum
         t_val = 0.0
 
         for r in eff_rates:
-            r_prob = InterestRatePrediction.FindRateProbability(c, ctr_type, r)
+            r_prob = NegotiationPrediction.FindRateProbability(c, ctr_type, r)
             t_val += r_prob * t_sum_inv
             if (sample > t_val):
                 continue
@@ -129,12 +129,12 @@ class InterestRatePrediction:
 
     def GetMaxDeferralPeriods(c, periods):
         sample_num = random.random()
-        t_sum = sum([InterestRatePrediction.FindDeferralProbability(c, p) for p in periods])
+        t_sum = sum([NegotiationPrediction.FindDeferralProbability(c, p) for p in periods])
         t_sum_inv = 1.0 / t_sum
         t_val = 0.0
 
         for p in periods:
-            r_prob = InterestRatePrediction.FindDeferralProbability(c, p)
+            r_prob = NegotiationPrediction.FindDeferralProbability(c, p)
             
             t_val += r_prob * t_sum_inv
             if (sample_num > t_val):
@@ -148,3 +148,4 @@ class InterestRatePrediction:
     def IsClientNegotiating(c):
         val = random.random() < c.negotiation_openness
         return val
+

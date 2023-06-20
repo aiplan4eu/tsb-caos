@@ -1,6 +1,6 @@
 from scenario_generator import ScenarioGenerator
 from plan_evaluator import PlanEvaluator, ContractEvaluation
-from interest_rate_prediction import InterestRatePrediction
+from negotiation_prediction import NegotiationPrediction
 from planner import Planner
 from common import Contract, Payment, Client, ContractStatus, ContractType, PaymentStatus
 from matplotlib import pyplot as plt

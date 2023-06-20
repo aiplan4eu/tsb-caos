@@ -50,8 +50,8 @@ class Client:
         if abs(self.def_in_p1 + def_open + 1) < 1e-5 or abs(self.def_in_p2 + def_open + 1) < 1e-5:
             log("Invalid deferral prediction curve", MessageType.ERROR)
         
-        self.def_in_b1 = 1 + (-def_incline / self.def_in_p1)
-        self.def_in_b2 = 1 + (-def_incline / self.def_in_p2)
+        self.def_in_b1 = 1 - (def_incline / self.def_in_p1)
+        self.def_in_b2 = 1 - (def_incline / self.def_in_p2)
     
     def Report(self):
         print("Name: ", self.name)
