@@ -6,17 +6,19 @@ CAOS is a prototype simulation-based decision support system for cash-flow plann
 
 ## How to Use
 
-### CLI
+To start the interactive interface of CAOS, execute the following command from a command line terminal:
 
-To start the system execute the following command from a terminal:
+```bash
+python caos_cli.py
+```
+This should initiate the CLI mode of the system that allows the user to interact with the system and perform all supported functions. 
 
-`python caos_cli.py`
+The system can also be integrated to other Python projects. For this, you should import the project files into your new project. Full system functionality is exposed via the `CAOSProblem` class included in `problem.py`.
 
-This should initiate the CLI mode of the system that allows the user to perform all supported functions of the system. The system can also be used as part of other Python projects. For this, you'll need to import problem.py in your code file module also supports programmatic usage via importing `problem.py` 
-
-
+More details on both the CLI but also the programmatic usage of the module can be found in the module [Documentation](caos.ipynb).
 
 ## Demo
 
+A demonstration that showcases the usage and the main functionality of the system can be found [Here](case_study.ipynb)
 
 
